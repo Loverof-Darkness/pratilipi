@@ -2,11 +2,11 @@ import {
   appOrigin,
   ensureDrop,
   error,
-  expiry,
   fileObjectKey,
   json,
   now,
   presignedPut,
+  resolveExpiry,
   token,
   withCors
 } from '../_lib.js';
@@ -30,11 +30,17 @@ export async function onRequest({ request, env, params }) {
     const input = await body();
     const id = token();
     const createdAt = now();
-    const expiresAt = expiry();
+    const retention = resolveExpiry(input.expiry);
     await env.DB.prepare('INSERT INTO drops (id, created_at, expires_at, label) VALUES (?1, ?2, ?3, ?4)')
-      .bind(id, createdAt, expiresAt, typeof input.label === 'string' ? input.label.slice(0, 80) : null).run();
+      .bind(id, createdAt, retention.expiresAt, typeof input.label === 'string' ? input.label.slice(0, 80) : null).run();
     const origin = appOrigin(request, env);
-    return response(json({ id, uploadUrl: `${origin}/u/${id}`, apiUrl: `${origin}/api/drop/${id}`, expiresAt }), request);
+    return response(json({
+      id,
+      expiry: retention.key,
+      expiresAt: retention.expiresAt,
+      uploadUrl: `${origin}/u/${id}`,
+      apiUrl: `${origin}/api/drop/${id}`
+    }), request);
   }
 
   if (path[0] === 'drop' && path.length >= 2) {
