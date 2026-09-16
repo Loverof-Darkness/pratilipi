@@ -1,7 +1,16 @@
 import { AwsClient } from 'aws4fetch';
 
 const TOKEN_BYTES = 18;
-const DROP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export const EXPIRY_OPTIONS = Object.freeze({
+  '1h': 60 * 60 * 1000,
+  '12h': 12 * 60 * 60 * 1000,
+  '1d': 24 * 60 * 60 * 1000,
+  '1w': 7 * 24 * 60 * 60 * 1000,
+  '1m': 30 * 24 * 60 * 60 * 1000
+});
+
+export const DEFAULT_EXPIRY = '1d';
 
 export function token(bytes = TOKEN_BYTES) {
   const array = new Uint8Array(bytes);
@@ -13,8 +22,10 @@ export function now() {
   return Date.now();
 }
 
-export function expiry() {
-  return now() + DROP_TTL_MS;
+export function resolveExpiry(value = DEFAULT_EXPIRY) {
+  const key = Object.prototype.hasOwnProperty.call(EXPIRY_OPTIONS, value) ? value : DEFAULT_EXPIRY;
+  const milliseconds = EXPIRY_OPTIONS[key];
+  return { key, milliseconds, expiresAt: now() + milliseconds };
 }
 
 export function json(data, init = {}) {
