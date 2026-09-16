@@ -162,7 +162,7 @@ When prompted, paste the corresponding R2 credentials.
 Connect `Loverof-Darkness/pratilipi` to Cloudflare Pages and use:
 
 - **Production branch:** `main`
-- **Build command:** `npm ci && npm run build`
+- **Build command:** `npm install && npm run build`
 - **Build output directory:** `dist`
 - **Root directory:** `/`
 
@@ -173,12 +173,12 @@ Configure the D1 and R2 bindings plus the variables/secrets above in the Pages p
 From a local checkout:
 
 ```bash
-npm ci
+npm install
 npm run build
 npx wrangler pages deploy dist --project-name pratilipi
 ```
 
-Pages Functions are deployed through the Pages Functions/ Wrangler flow; the Cloudflare dashboard's simple Direct Upload flow does not compile a `functions/` directory.
+Pages Functions are deployed through the Pages Functions/Wrangler flow; the Cloudflare dashboard's simple Direct Upload flow does not compile a `functions/` directory.
 
 ## Local development
 
