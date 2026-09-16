@@ -8,6 +8,17 @@
   };
   let selected = '1d';
 
+  const style = document.createElement('style');
+  style.textContent = `
+    .expiry-control{display:grid;grid-template-columns:1fr auto;gap:7px 12px;margin:14px 0 2px;padding:12px 13px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025)}
+    .expiry-control label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;align-self:center;color:rgba(255,255,255,.72)}
+    .expiry-control select{min-width:128px;border:1px solid rgba(255,255,255,.12);border-radius:9px;background:#101621;color:#f4f7fb;padding:8px 10px;outline:none}
+    .expiry-control select:focus{border-color:rgba(255,255,255,.35)}
+    .expiry-control span{grid-column:1/-1;font-size:12px;color:rgba(255,255,255,.48)}
+    @media(max-width:640px){.expiry-control{grid-template-columns:1fr}.expiry-control select{width:100%}}
+  `;
+  document.head.appendChild(style);
+
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const requestUrl = typeof input === 'string' ? input : input?.url || '';
