@@ -12,13 +12,23 @@ Pratilipi is a web-based, cross-device sharing drop for files, media and text. C
 4. **Direct downloads** — generated `/d/...` links redirect straight to the object download; the recipient does not land on a Pratilipi dashboard.
 5. **Simple text sharing** — paste text into the dedicated text section and create a direct `.txt` download link.
 6. **Cross-device live view** — an upload session refreshes automatically so a desktop can see mobile uploads as they arrive.
-7. **Cloudflare-first deployment** — static UI on Pages, metadata in D1, binary objects in a private R2 bucket, signed URLs for browser-to-R2 transfer.
-8. **No build-time file storage** — user content never becomes a Pages static asset.
+7. **Active Uploads history** — the same browser keeps a local list of previously created, still-active Drops so they can be reopened quickly.
+8. **Configurable retention** — each new Drop defaults to 1 day and supports 1 hour, 12 hours, 1 day, 1 week, or 1 month retention.
+9. **Cloudflare-first deployment** — static UI on Pages, metadata in D1, binary objects in a private R2 bucket, signed URLs for browser-to-R2 transfer.
+10. **No build-time file storage** — user content never becomes a Pages static asset.
+
+## Navigation model
+
+- **Home · New Upload** — creates and manages the current Drop.
+- **Active Uploads** — lists active Drops previously created in this browser/device; each entry can be reopened or removed from local history.
+- The server remains authoritative: every saved history entry is checked against the Drop API, and expired/unavailable entries are removed from the local list.
+
+> The Active Uploads view is intentionally local to the browser in v0.1 because Pratilipi has no user-account system. A future authenticated library can make the history cross-device.
 
 ## Core flow
 
 ```text
-Create Drop
+Home → Create Drop → choose retention
    ↓
 Desktop gets /u/<drop-token>
    ↓
@@ -37,6 +47,8 @@ Pratilipi records metadata in D1
 Pratilipi shows direct /d/<file-token> links + QR codes
    ↓
 Recipient clicks link → Pages Function issues signed R2 GET redirect
+   ↓
+Drop reaches expiry → cleanup worker removes its R2 objects + metadata
 ```
 
 ## Architecture
@@ -48,6 +60,7 @@ Recipient clicks link → Pages Function issues signed R2 GET redirect
 - **Binary storage:** private Cloudflare R2 bucket
 - **Temporary transfer authorization:** R2 S3-compatible presigned URLs using `aws4fetch`
 - **QR generation:** `qrcode` npm package in the browser
+- **Scheduled cleanup:** Cloudflare Worker with a Cron Trigger
 
 Cloudflare documents Pages Functions as the server-side runtime for Pages, file-based routing for `/functions`, D1/R2 bindings, and presigned R2 URLs for direct browser uploads/downloads. See the official docs linked below.
 
@@ -69,6 +82,8 @@ Do **not** put uploaded files in `dist/` or rely on Pages static assets for user
 │   └── u/[id].js
 ├── public/
 │   ├── _headers
+│   ├── expiry.js
+│   ├── navigation.js
 │   └── r2-cors.json
 ├── src/
 │   ├── main.js
@@ -76,6 +91,9 @@ Do **not** put uploaded files in `dist/` or rely on Pages static assets for user
 ├── index.html
 ├── package.json
 ├── schema.sql
+├── workers/
+│   └── cleanup.js
+├── wrangler.cleanup.toml
 ├── vite.config.js
 └── wrangler.toml
 ```
@@ -88,6 +106,7 @@ Create these once in the same Cloudflare account:
 2. **D1 database:** `pratilipi`
 3. **R2 S3 API token** with permission to read/write the `pratilipi` bucket. Use the generated access key ID and secret access key as Pages/Worker secrets.
 4. **Pages project:** `pratilipi`
+5. **Cleanup Worker:** `pratilipi-cleanup`
 
 The application expects these bindings/variables:
 
@@ -180,6 +199,18 @@ npx wrangler pages deploy dist --project-name pratilipi
 
 Pages Functions are deployed through the Pages Functions/Wrangler flow; the Cloudflare dashboard's simple Direct Upload flow does not compile a `functions/` directory.
 
+## Cleanup Worker deployment
+
+The cleanup Worker uses the same D1 database and R2 bucket and runs hourly. It finds Drops whose `expires_at` is in the past, deletes their R2 objects, then removes their D1 rows.
+
+Deploy it separately:
+
+```bash
+npx wrangler deploy -c wrangler.cleanup.toml
+```
+
+Keep the Worker bound to the same `pratilipi` D1 database and `pratilipi` R2 bucket.
+
 ## Local development
 
 Build first:
@@ -202,7 +233,7 @@ npx wrangler pages dev dist
 
 ## URL model
 
-- `/` — create/open a Pratilipi drop
+- `/` — Home / new upload
 - `/u/<drop-token>` — upload page for a particular drop, suitable for QR/mobile handoff
 - `/d/<file-token>` — direct file download endpoint
 - `/d/text/<text-token>` — direct text download endpoint
@@ -219,14 +250,15 @@ The download endpoints do not render a Pratilipi page. They issue a short-lived 
 - Mobile upload works through the same drop URL opened after QR scan.
 - Direct download URLs and QR codes are generated after successful upload/save.
 - Files can be deleted from the current drop.
-- Drop records expire after 7 days at the metadata layer.
+- New Drop retention can be selected as 1 hour, 12 hours, 1 day (default), 1 week, or 1 month.
+- Active Uploads keeps a same-browser local history and revalidates entries against the server.
+- Expired Drops become inaccessible and the cleanup Worker removes their stored objects and metadata.
 
 ## Explicit non-goals for v0.1
 
-- User accounts and permanent libraries
+- User accounts and permanent cross-device libraries
 - Server-side ZIP creation for multiple files
 - End-to-end encryption before R2 storage
-- Automatic background deletion of expired R2 objects
 - Virus scanning/content moderation
 
 These can be added without changing the basic Pages + D1 + R2 architecture.
@@ -237,6 +269,7 @@ These can be added without changing the basic Pages + D1 + R2 architecture.
 - Pages Functions: https://developers.cloudflare.com/pages/functions/
 - Pages Functions routing: https://developers.cloudflare.com/pages/functions/routing/
 - Pages Functions pricing: https://developers.cloudflare.com/pages/functions/pricing/
+- Workers Cron Triggers: https://developers.cloudflare.com/workers/configuration/cron-triggers/
 - Cloudflare Workers limits: https://developers.cloudflare.com/workers/platform/limits/
 - R2 pricing: https://developers.cloudflare.com/r2/pricing/
 - R2 limits: https://developers.cloudflare.com/r2/platform/limits/
