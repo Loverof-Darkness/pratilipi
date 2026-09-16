@@ -1,0 +1,21 @@
+{
+  "name": "pratilipi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name pratilipi",
+    "cf:dev": "wrangler pages dev dist",
+    "cf:types": "wrangler types --path=functions/types.d.ts"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "vite": "^7.1.5",
+    "wrangler": "^4.38.0"
+  }
+}
