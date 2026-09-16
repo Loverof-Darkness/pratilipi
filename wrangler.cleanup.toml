@@ -1,0 +1,15 @@
+name = "pratilipi-cleanup"
+main = "workers/cleanup.js"
+compatibility_date = "2026-09-16"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pratilipi"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "pratilipi"
