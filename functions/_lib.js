@@ -1,5 +1,3 @@
-import { AwsClient } from 'aws4fetch';
-
 const TOKEN_BYTES = 18;
 
 export const EXPIRY_OPTIONS = Object.freeze({
@@ -24,8 +22,7 @@ export function now() {
 
 export function resolveExpiry(value = DEFAULT_EXPIRY) {
   const key = Object.prototype.hasOwnProperty.call(EXPIRY_OPTIONS, value) ? value : DEFAULT_EXPIRY;
-  const milliseconds = EXPIRY_OPTIONS[key];
-  return { key, milliseconds, expiresAt: now() + milliseconds };
+  return { key, milliseconds: EXPIRY_OPTIONS[key], expiresAt: now() + EXPIRY_OPTIONS[key] };
 }
 
 export function json(data, init = {}) {
@@ -70,47 +67,58 @@ export function contentDisposition(filename) {
   return `attachment; filename="${safe}"; filename*=UTF-8''${encoded}`;
 }
 
-export function r2Client(env) {
-  if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET_NAME) {
-    throw new Error('R2 signing environment variables are not configured.');
+export async function sha1Hex(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-1', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function cloudinaryEnv(env) {
+  if (!env.CLOUDINARY_CLOUD_NAME) throw new Error('Cloudinary cloud name is not configured.');
+  return env.CLOUDINARY_CLOUD_NAME;
+}
+
+export function cloudinaryUploadUrl(env) {
+  return `https://api.cloudinary.com/v1_1/${cloudinaryEnv(env)}/auto/upload`;
+}
+
+export function validateCloudinaryUrl(env, value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'res.cloudinary.com' &&
+      url.pathname.startsWith(`/${cloudinaryEnv(env)}/`);
+  } catch {
+    return false;
   }
-  return new AwsClient({
-    service: 's3',
-    region: 'auto',
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY
+}
+
+export async function destroyCloudinaryAsset(env, { publicId, resourceType = 'raw', invalidate = true }) {
+  if (!env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET) {
+    throw new Error('Cloudinary API key/secret are required for deletion cleanup.');
+  }
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = {
+    invalidate: invalidate ? 'true' : 'false',
+    public_id: publicId,
+    timestamp: String(timestamp)
+  };
+  const serialized = Object.keys(params).sort().map((key) => `${key}=${params[key]}`).join('&');
+  const signature = await sha1Hex(`${serialized}${env.CLOUDINARY_API_SECRET}`);
+  const form = new URLSearchParams({
+    ...params,
+    api_key: env.CLOUDINARY_API_KEY,
+    signature
   });
-}
-
-export function r2ObjectUrl(env, key) {
-  const encodedKey = key.split('/').map(encodeURIComponent).join('/');
-  return `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${encodedKey}`;
-}
-
-export async function presignedPut(env, key, contentType, expires = 3600) {
-  const client = r2Client(env);
-  const url = new URL(r2ObjectUrl(env, key));
-  url.searchParams.set('X-Amz-Expires', String(expires));
-  const signed = await client.sign(new Request(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType || 'application/octet-stream' }
-  }), { aws: { signQuery: true } });
-  return signed.url.toString();
-}
-
-export async function presignedGet(env, key, filename, expires = 86400) {
-  const client = r2Client(env);
-  const url = new URL(r2ObjectUrl(env, key));
-  url.searchParams.set('X-Amz-Expires', String(expires));
-  url.searchParams.set('response-content-disposition', contentDisposition(filename));
-  url.searchParams.set('response-content-type', 'application/octet-stream');
-  const signed = await client.sign(new Request(url, { method: 'GET' }), { aws: { signQuery: true } });
-  return signed.url.toString();
-}
-
-export function fileObjectKey(dropId, fileId, filename) {
-  const normalized = (filename || 'file').normalize('NFKC').replace(/[^\p{L}\p{N}._ -]/gu, '_').replace(/\s+/g, '-').slice(0, 160);
-  return `drops/${dropId}/${fileId}-${normalized}`;
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryEnv(env)}/${resourceType}/destroy`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: form
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || (data.result && !['ok', 'not found'].includes(data.result))) {
+    throw new Error(`Cloudinary deletion failed: ${data.error?.message || data.result || response.status}`);
+  }
+  return data;
 }
 
 export async function getDrop(env, id) {
@@ -120,7 +128,7 @@ export async function getDrop(env, id) {
 export async function ensureDrop(env, id) {
   const drop = await getDrop(env, id);
   if (!drop) return { error: 'Drop not found.' };
-  if (drop.expires_at && Number(drop.expires_at) < now()) return { error: 'This drop has expired.' };
+  if (drop.expires_at && Number(drop.expires_at) <= now()) return { error: 'This drop has expired.' };
   return { drop };
 }
 
