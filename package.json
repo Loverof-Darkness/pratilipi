@@ -12,6 +12,7 @@
     "cf:types": "wrangler types --path=functions/types.d.ts"
   },
   "dependencies": {
+    "aws4fetch": "^1.0.20",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
