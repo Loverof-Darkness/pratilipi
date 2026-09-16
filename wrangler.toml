@@ -1,0 +1,18 @@
+name = "pratilipi"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-16"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pratilipi"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "pratilipi"
+
+[vars]
+# Public account ID used only to construct the R2 S3 endpoint.
+R2_ACCOUNT_ID = "REPLACE_WITH_CLOUDFLARE_ACCOUNT_ID"
+# Set the canonical public origin after your Pages/custom domain exists.
+APP_ORIGIN = "https://pratilipi.pages.dev"
