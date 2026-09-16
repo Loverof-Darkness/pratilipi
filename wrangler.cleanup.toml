@@ -8,7 +8,7 @@ crons = ["0 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "pratilipi"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "e28d8940-50da-412a-b19e-62269bd17147"
 
 [vars]
 CLOUDINARY_CLOUD_NAME = "s7aopw6x"
