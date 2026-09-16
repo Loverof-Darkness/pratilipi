@@ -1,6 +1,6 @@
 # Pratilipi expiry policy
 
-Pratilipi now supports per-drop retention. The selection applies when a new upload drop is created.
+Pratilipi supports per-drop retention. The selected retention is fixed when a new Drop is created.
 
 | Option | Retention |
 |---|---:|
@@ -14,11 +14,11 @@ Pratilipi now supports per-drop retention. The selection applies when a new uplo
 
 ## What expires
 
-The expiry belongs to the whole drop, so all files and text snippets in that drop become unavailable together. Download endpoints check the drop expiry before issuing a download URL, so an expired direct link returns `410` even if its old URL is still known.
+The expiry belongs to the whole Drop, so all Cloudinary-backed files and text snippets in that Drop become unavailable together. Download endpoints check the Drop expiry before redirecting to Cloudinary, so an expired direct link returns `410` even when the old URL is still known.
 
 ## Physical deletion
 
-An hourly Cloudflare Worker (`pratilipi-cleanup`) finds expired drops, deletes their R2 objects, and then deletes the D1 drop record. The cleanup job runs at the top of every UTC hour, so physical deletion can occur shortly after the configured expiry rather than at the exact millisecond of expiry. The application itself blocks access immediately when the expiry timestamp is reached.
+An hourly Cloudflare Worker (`pratilipi-cleanup`) finds expired Drops, deletes their Cloudinary assets using the authenticated Destroy API, and only then deletes the D1 Drop record. The cleanup job runs at the top of every UTC hour, so physical deletion can occur shortly after the configured expiry rather than at the exact millisecond of expiry. Application access is blocked immediately when the expiry timestamp is reached.
 
 ## Deployment
 
@@ -30,11 +30,18 @@ npx wrangler d1 create pratilipi
 npx wrangler deploy --config wrangler.cleanup.toml
 ```
 
-The cleanup Worker uses the same D1 database and R2 bucket as the Pages Functions. Cron Triggers are a standard Cloudflare Workers feature and can run scheduled maintenance jobs. Cloudflare documents `0 * * * *` as an every-hour trigger example.
+Set these Worker secrets:
+
+```text
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+```
+
+The cleanup Worker uses the same D1 database and Cloudinary product environment as the Pages Functions. Cloudinary documents the Destroy API as a server-side authenticated operation. urlhttps://cloudinary.com/documentation/delete_assets
 
 ## Security behavior
 
 - Expiry values are server-validated; unknown values fall back to the 1-day default.
 - The client selector is only a convenience. The server is authoritative.
-- Expired drops cannot be read, uploaded to, or downloaded from.
-- Cleanup deletes R2 objects before deleting the corresponding D1 drop record.
+- Expired Drops cannot be read, uploaded to, or downloaded from.
+- Cloudinary assets are deleted before the corresponding D1 Drop record is removed.
