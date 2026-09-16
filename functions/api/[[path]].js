@@ -9,7 +9,7 @@ import {
   presignedPut,
   token,
   withCors
-} from '../../functions/_lib.js';
+} from '../_lib.js';
 
 function response(body, request) {
   return withCors(body, request);
@@ -30,15 +30,11 @@ export async function onRequest({ request, env, params }) {
     const input = await body();
     const id = token();
     const createdAt = now();
+    const expiresAt = expiry();
     await env.DB.prepare('INSERT INTO drops (id, created_at, expires_at, label) VALUES (?1, ?2, ?3, ?4)')
-      .bind(id, createdAt, expiry(), typeof input.label === 'string' ? input.label.slice(0, 80) : null).run();
+      .bind(id, createdAt, expiresAt, typeof input.label === 'string' ? input.label.slice(0, 80) : null).run();
     const origin = appOrigin(request, env);
-    return response(json({
-      id,
-      uploadUrl: `${origin}/u/${id}`,
-      apiUrl: `${origin}/api/drop/${id}`,
-      expiresAt: expiry()
-    }), request);
+    return response(json({ id, uploadUrl: `${origin}/u/${id}`, apiUrl: `${origin}/api/drop/${id}`, expiresAt }), request);
   }
 
   if (path[0] === 'drop' && path.length >= 2) {
@@ -77,20 +73,11 @@ export async function onRequest({ request, env, params }) {
       const key = String(input.key || '');
       const contentType = String(input.contentType || 'application/octet-stream').slice(0, 200);
       const size = Math.max(0, Number(input.size || 0));
-      if (!fileId || !key || !fileId.startsWith('') || !key.startsWith(`drops/${dropId}/`)) return response(error('Invalid upload completion payload.'), request);
+      if (!fileId || !key.startsWith(`drops/${dropId}/`)) return response(error('Invalid upload completion payload.'), request);
       await env.DB.prepare('INSERT INTO files (id, drop_id, name, object_key, content_type, size, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)')
         .bind(fileId, dropId, name, key, contentType, size, now()).run();
       const origin = appOrigin(request, env);
-      return response(json({
-        ok: true,
-        file: {
-          id: fileId,
-          name,
-          content_type: contentType,
-          size,
-          downloadUrl: `${origin}/d/${fileId}`
-        }
-      }), request);
+      return response(json({ ok: true, file: { id: fileId, name, content_type: contentType, size, downloadUrl: `${origin}/d/${fileId}` } }), request);
     }
 
     if (path.length === 3 && path[2] === 'text' && method === 'POST') {
