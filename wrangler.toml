@@ -2,6 +2,7 @@ name = "pratilipi"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-09-16"
 
+# Production Pages Functions binding for the existing Pratilipi D1 database.
 [[d1_databases]]
 binding = "DB"
 database_name = "pratilipi"
