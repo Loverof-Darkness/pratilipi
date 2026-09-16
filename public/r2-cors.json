@@ -1,9 +1,0 @@
-[
-  {
-    "AllowedOrigins": ["https://pratilipi.pages.dev"],
-    "AllowedMethods": ["PUT"],
-    "AllowedHeaders": ["Content-Type"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 3600
-  }
-]
