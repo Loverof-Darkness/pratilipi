@@ -2,276 +2,196 @@
 
 **Copy · Store · Share**
 
-Pratilipi is a web-based, cross-device sharing drop for files, media and text. Create one unlisted upload session, send its QR/link to another device, upload one or many files, paste text, and immediately get direct download URLs and QR codes for the resulting items.
+Pratilipi is a lightweight web-based sharing drop for text, images, songs, videos, documents and other files. Create an unlisted upload session, choose how long it should live, share its QR/link with another device, upload or paste content, and get direct download links.
 
 ## Product goals
 
-1. **One place for anything** — images, songs, videos, documents, archives and other files.
-2. **Fast input** — drag & drop, direct file picker and clipboard paste for files/images/text.
-3. **Phone handoff** — scan one QR code to open the same upload session on a mobile device.
-4. **Direct downloads** — generated `/d/...` links redirect straight to the object download; the recipient does not land on a Pratilipi dashboard.
-5. **Simple text sharing** — paste text into the dedicated text section and create a direct `.txt` download link.
-6. **Cross-device live view** — an upload session refreshes automatically so a desktop can see mobile uploads as they arrive.
-7. **Active Uploads history** — the same browser keeps a local list of previously created, still-active Drops so they can be reopened quickly.
-8. **Configurable retention** — each new Drop defaults to 1 day and supports 1 hour, 12 hours, 1 day, 1 week, or 1 month retention.
-9. **Cloudflare-first deployment** — static UI on Pages, metadata in D1, binary objects in a private R2 bucket, signed URLs for browser-to-R2 transfer.
-10. **No build-time file storage** — user content never becomes a Pages static asset.
-
-## Navigation model
-
-- **Home · New Upload** — creates and manages the current Drop.
-- **Active Uploads** — lists active Drops previously created in this browser/device; each entry can be reopened or removed from local history.
-- The server remains authoritative: every saved history entry is checked against the Drop API, and expired/unavailable entries are removed from the local list.
-
-> The Active Uploads view is intentionally local to the browser in v0.1 because Pratilipi has no user-account system. A future authenticated library can make the history cross-device.
-
-## Core flow
-
-```text
-Home → Create Drop → choose retention
-   ↓
-Desktop gets /u/<drop-token>
-   ↓
-Show QR / copy upload URL
-   ↓
-Phone scans QR → same /u/<drop-token>
-   ↓
-Choose / drag / paste files OR paste text
-   ↓
-Browser requests short-lived R2 presigned PUT URL
-   ↓
-Browser uploads directly to private R2
-   ↓
-Pratilipi records metadata in D1
-   ↓
-Pratilipi shows direct /d/<file-token> links + QR codes
-   ↓
-Recipient clicks link → Pages Function issues signed R2 GET redirect
-   ↓
-Drop reaches expiry → cleanup worker removes its R2 objects + metadata
-```
+- **One place for anything** — images, audio, video, PDFs, archives and arbitrary files.
+- **Fast input** — drag & drop, file picker, clipboard file/image paste and a dedicated text-paste section.
+- **Phone handoff** — scan one QR code to open the same upload session on a mobile device.
+- **Direct downloads** — `/d/<token>` redirects to the actual Cloudinary asset; the recipient does not land on a Pratilipi dashboard.
+- **Selectable retention** — 1 hour, 12 hours, 1 day (default), 1 week or 1 month.
+- **Active Uploads** — the current browser keeps a local list of active Drops and re-checks them against the backend.
+- **Cloudinary storage** — browser uploads go directly to Cloudinary through an unsigned upload preset.
+- **Cloudflare backend** — Pages Functions handle sessions, D1 metadata, download redirects and authenticated deletion; a scheduled Worker removes expired Cloudinary assets.
 
 ## Architecture
 
-- **Frontend:** Vite + vanilla JavaScript + CSS
-- **Hosting:** Cloudflare Pages
-- **Server-side API:** Cloudflare Pages Functions
-- **Metadata:** Cloudflare D1
-- **Binary storage:** private Cloudflare R2 bucket
-- **Temporary transfer authorization:** R2 S3-compatible presigned URLs using `aws4fetch`
-- **QR generation:** `qrcode` npm package in the browser
-- **Scheduled cleanup:** Cloudflare Worker with a Cron Trigger
-
-Cloudflare documents Pages Functions as the server-side runtime for Pages, file-based routing for `/functions`, D1/R2 bindings, and presigned R2 URLs for direct browser uploads/downloads. See the official docs linked below.
-
-## Important deployment fact
-
-Do **not** put uploaded files in `dist/` or rely on Pages static assets for user content. Cloudflare's current Pages Free limit is **25 MiB per static asset**. R2 supports much larger objects and its current free tier includes **10 GB-month of Standard storage**, **1 million Class A operations/month**, **10 million Class B operations/month**, and free egress. Pages Functions use the Workers Free quota, currently **100,000 requests/day**. These limits apply to the Cloudflare account/product plan and can change, so verify them before production rollout.
-
-## Repository structure
-
 ```text
-.
-├── functions/
-│   ├── _lib.js
-│   ├── api/
-│   │   └── [[path]].js
-│   ├── d/
-│   │   ├── [id].js
-│   │   └── text/[id].js
-│   └── u/[id].js
-├── public/
-│   ├── _headers
-│   ├── expiry.js
-│   ├── navigation.js
-│   └── r2-cors.json
-├── src/
-│   ├── main.js
-│   └── styles.css
-├── index.html
-├── package.json
-├── schema.sql
-├── workers/
-│   └── cleanup.js
-├── wrangler.cleanup.toml
-├── vite.config.js
-└── wrangler.toml
+Browser / Mobile
+      │
+      ├── Files / images / audio / video / raw files
+      │       └── direct unsigned upload → Cloudinary
+      │
+      └── Text + session metadata
+              └── Cloudflare Pages Functions → D1
+
+Direct download
+      Browser → /d/<token> → Pages Function → Cloudinary secure URL
+
+Expiry cleanup
+      Cloudflare Cron Worker → D1 expired Drops → Cloudinary destroy API
 ```
 
-## Cloudflare resources required
+Cloudinary documents unsigned presets for direct browser uploads, its `auto` upload resource type for detecting image/video/raw asset types, and signed server-side destruction for deleting assets. urlhttps://cloudinary.com/documentation/client_side_uploading urlhttps://cloudinary.com/documentation/upload_parameters urlhttps://cloudinary.com/documentation/delete_assets
 
-Create these once in the same Cloudflare account:
+## Cloudinary configuration used by this project
 
-1. **R2 bucket:** `pratilipi`
-2. **D1 database:** `pratilipi`
-3. **R2 S3 API token** with permission to read/write the `pratilipi` bucket. Use the generated access key ID and secret access key as Pages/Worker secrets.
-4. **Pages project:** `pratilipi`
-5. **Cleanup Worker:** `pratilipi-cleanup`
+```text
+Cloud name: s7aopw6x
+Upload preset: pratilipi
+Signing mode: Unsigned
+```
 
-The application expects these bindings/variables:
+The unsigned preset is intended for browser uploads. The API secret is never embedded in frontend code. Cloudinary distinguishes unsigned client uploads from signed server-side operations. urlhttps://cloudinary.com/documentation/client_side_uploading
 
-| Name | Type | Purpose |
-|---|---|---|
-| `DB` | D1 binding | Drop/file/text metadata |
-| `BUCKET` | R2 binding | Private uploaded objects |
-| `R2_ACCOUNT_ID` | variable | R2 S3 endpoint construction |
-| `R2_BUCKET_NAME` | variable | R2 bucket name |
-| `APP_ORIGIN` | variable | Canonical application origin |
-| `R2_ACCESS_KEY_ID` | secret | R2 presigning |
-| `R2_SECRET_ACCESS_KEY` | secret | R2 presigning |
+## Required Cloudflare resources
 
-## First-time setup
+Create:
 
-Authenticate Wrangler:
+1. **Cloudflare Pages project:** `pratilipi`
+2. **Cloudflare D1 database:** `pratilipi`
+3. **Cloudflare Worker:** `pratilipi-cleanup` using `wrangler.cleanup.toml` with an hourly Cron trigger.
+
+No Cloudflare R2 bucket is required by the current architecture.
+
+### Pages binding and variables
+
+D1 binding:
+
+```text
+DB → pratilipi
+```
+
+Variables:
+
+```text
+CLOUDINARY_CLOUD_NAME = s7aopw6x
+CLOUDINARY_UPLOAD_PRESET = pratilipi
+APP_ORIGIN = https://pratilipi.pages.dev
+```
+
+Secrets:
+
+```text
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+```
+
+The API key/secret are needed only for authenticated Cloudinary deletion. Cloudinary states that the Destroy API requires server-side authentication/signing and that API credentials should not be exposed in client-side code. urlhttps://cloudinary.com/documentation/delete_assets
+
+Configure the same two secrets on the cleanup Worker.
+
+## D1 schema
+
+Apply `schema.sql` to the D1 database before first use:
 
 ```bash
 npx wrangler login
-```
-
-Create the R2 bucket:
-
-```bash
-npx wrangler r2 bucket create pratilipi
-```
-
-Create the D1 database:
-
-```bash
 npx wrangler d1 create pratilipi
-```
-
-Copy the returned D1 `database_id` into `wrangler.toml` in place of `REPLACE_WITH_D1_DATABASE_ID`.
-
-Set `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, and `APP_ORIGIN` in `wrangler.toml`.
-
-Apply the schema to the remote D1 database:
-
-```bash
 npx wrangler d1 execute pratilipi --remote --file=./schema.sql
 ```
 
-Install dependencies and create a production build:
+Put the returned database ID into `wrangler.toml` and `wrangler.cleanup.toml`.
 
-```bash
-npm install
-npm run build
-```
+## Cloudflare Pages deployment
 
-## R2 CORS
+Connect `Loverof-Darkness/pratilipi` to Cloudflare Pages:
 
-Because uploads use browser-side presigned `PUT` requests, configure the R2 bucket CORS policy. A ready-to-edit policy is included at `public/r2-cors.json`.
+- Production branch: `main`
+- Build command: `npm install && npm run build`
+- Build output directory: `dist`
+- Root directory: `/`
 
-Use the real Pages/custom-domain origin in `AllowedOrigins` before deploying.
-
-## R2 signing secrets
-
-Generate an R2 S3 API token/key for the bucket, then configure these as **secrets**, not source-controlled variables:
-
-```bash
-npx wrangler pages secret put R2_ACCESS_KEY_ID --project-name pratilipi
-npx wrangler pages secret put R2_SECRET_ACCESS_KEY --project-name pratilipi
-```
-
-When prompted, paste the corresponding R2 credentials.
-
-## Pages deployment
-
-### Git-connected deployment
-
-Connect `Loverof-Darkness/pratilipi` to Cloudflare Pages and use:
-
-- **Production branch:** `main`
-- **Build command:** `npm install && npm run build`
-- **Build output directory:** `dist`
-- **Root directory:** `/`
-
-Configure the D1 and R2 bindings plus the variables/secrets above in the Pages project.
-
-### Wrangler deployment
-
-From a local checkout:
-
-```bash
-npm install
-npm run build
-npx wrangler pages deploy dist --project-name pratilipi
-```
-
-Pages Functions are deployed through the Pages Functions/Wrangler flow; the Cloudflare dashboard's simple Direct Upload flow does not compile a `functions/` directory.
+Then add the D1 binding and the variables/secrets listed above.
 
 ## Cleanup Worker deployment
 
-The cleanup Worker uses the same D1 database and R2 bucket and runs hourly. It finds Drops whose `expires_at` is in the past, deletes their R2 objects, then removes their D1 rows.
-
-Deploy it separately:
-
 ```bash
-npx wrangler deploy -c wrangler.cleanup.toml
+npx wrangler deploy --config wrangler.cleanup.toml
 ```
 
-Keep the Worker bound to the same `pratilipi` D1 database and `pratilipi` R2 bucket.
+The Worker runs hourly. For each expired Drop it deletes every recorded Cloudinary asset and removes the D1 Drop only after all asset deletions succeed. Cloudinary supports destroying individual assets by public ID and resource type. urlhttps://cloudinary.com/documentation/delete_assets
+
+## GitHub Pages preview
+
+GitHub Pages is configured as a static preview. Its Actions workflow builds the same frontend but points API calls at:
+
+```text
+https://pratilipi.pages.dev
+```
+
+GitHub Pages itself does not execute the `functions/` backend; Cloudflare Pages is the full application deployment.
+
+## Core routes
+
+```text
+/                         Home / new upload
+/u/<drop-token>            Upload session for QR/mobile handoff
+/d/<file-token>            Direct file download redirect
+/d/text/<text-token>       Direct text download
+/api/drop                  Create Drop
+/api/drop/<id>             Read Drop contents
+/api/drop/<id>/complete    Record Cloudinary upload metadata
+/api/drop/<id>/text        Save text
+/api/drop/<id>/file/<id>   Delete a file
+```
+
+## Upload flow
+
+1. Create a Drop and choose its retention.
+2. Pratilipi stores the Drop and expiry in D1.
+3. Browser uploads each file directly to Cloudinary using the unsigned `pratilipi` preset.
+4. The Cloudinary response is sent to the Pages Function.
+5. D1 stores the file metadata and Cloudinary URL/public ID.
+6. Pratilipi generates a stable `/d/<token>` link and QR code.
+
+Cloudinary's upload response includes a URL and public ID for the uploaded asset. urlhttps://cloudinary.com/documentation/upload_images
+
+## Retention
+
+```text
+1h  = 1 Hour
+12h = 12 Hours
+1d  = 1 Day (default)
+1w  = 1 Week
+1m  = 1 Month (30 days)
+```
+
+Expiry is fixed when a Drop is created. Existing Drops are not silently changed by the selector.
+
+The backend rejects access after expiry even if the scheduled cleanup has not run yet. The hourly cleanup Worker then permanently removes the Cloudinary assets and D1 metadata.
+
+## Active Uploads
+
+There is no account/login system in the MVP. Active Uploads is therefore a same-browser/device local history backed by server validation. Expired or unavailable Drops disappear from that list.
+
+## Security notes
+
+- The Cloudinary upload preset is intentionally unsigned because direct browser uploads need no API secret. Cloudinary notes that unsigned preset names are public, so the preset should be limited to the options required for this app and can be rotated/disabled if abused. urlhttps://cloudinary.com/documentation/client_side_uploading
+- Cloudinary API credentials are backend-only secrets.
+- Drop tokens are long random values.
+- Download routes verify Drop expiry before redirecting.
+- Download responses use `no-store` and `no-referrer` headers.
 
 ## Local development
 
-Build first:
-
 ```bash
-npm run build
-```
-
-For the browser-only UI without Cloudflare bindings:
-
-```bash
+npm install
 npm run dev
 ```
 
-For a Cloudflare Pages-style local run with bindings, use Wrangler after configuring a local/remote D1 and R2 environment:
+For Pages-style local development with bindings:
 
 ```bash
+npm run build
 npx wrangler pages dev dist
 ```
 
-## URL model
+## Explicit non-goals for this MVP
 
-- `/` — Home / new upload
-- `/u/<drop-token>` — upload page for a particular drop, suitable for QR/mobile handoff
-- `/d/<file-token>` — direct file download endpoint
-- `/d/text/<text-token>` — direct text download endpoint
-- `/api/drop...` — JSON API used by the frontend
-
-The download endpoints do not render a Pratilipi page. They issue a short-lived signed R2 download redirect instead.
-
-## Current MVP behavior
-
-- Multi-file selection is supported.
-- Drag & drop is supported.
-- Clipboard file/image paste is supported where the browser exposes clipboard file items.
-- Clipboard text is inserted into the text section when focus is outside the textarea.
-- Mobile upload works through the same drop URL opened after QR scan.
-- Direct download URLs and QR codes are generated after successful upload/save.
-- Files can be deleted from the current drop.
-- New Drop retention can be selected as 1 hour, 12 hours, 1 day (default), 1 week, or 1 month.
-- Active Uploads keeps a same-browser local history and revalidates entries against the server.
-- Expired Drops become inaccessible and the cleanup Worker removes their stored objects and metadata.
-
-## Explicit non-goals for v0.1
-
-- User accounts and permanent cross-device libraries
-- Server-side ZIP creation for multiple files
-- End-to-end encryption before R2 storage
+- User accounts / permanent libraries
+- Server-side ZIP packaging
+- Client-side end-to-end encryption
 - Virus scanning/content moderation
 
-These can be added without changing the basic Pages + D1 + R2 architecture.
-
-## Official references
-
-- Cloudflare Pages limits: https://developers.cloudflare.com/pages/platform/limits/
-- Pages Functions: https://developers.cloudflare.com/pages/functions/
-- Pages Functions routing: https://developers.cloudflare.com/pages/functions/routing/
-- Pages Functions pricing: https://developers.cloudflare.com/pages/functions/pricing/
-- Workers Cron Triggers: https://developers.cloudflare.com/workers/configuration/cron-triggers/
-- Cloudflare Workers limits: https://developers.cloudflare.com/workers/platform/limits/
-- R2 pricing: https://developers.cloudflare.com/r2/pricing/
-- R2 limits: https://developers.cloudflare.com/r2/platform/limits/
-- R2 presigned URLs: https://developers.cloudflare.com/r2/api/s3/presigned-urls/
-- R2 `aws4fetch` example: https://developers.cloudflare.com/r2/examples/aws/aws4fetch/
