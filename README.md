@@ -4,6 +4,10 @@
 
 Pratilipi is a lightweight web-based sharing drop for text, images, songs, videos, documents and other files. Create an unlisted upload session, choose how long it should live, share its QR/link with another device, upload or paste content, and get direct download links.
 
+## Deployment smoke test
+
+Git push trigger check — Cloudflare Pages should build this commit automatically.
+
 ## Product goals
 
 - **One place for anything** — images, audio, video, PDFs, archives and arbitrary files.
@@ -194,4 +198,3 @@ npx wrangler pages dev dist
 - Server-side ZIP packaging
 - Client-side end-to-end encryption
 - Virus scanning/content moderation
-
