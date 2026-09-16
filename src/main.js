@@ -23,10 +23,10 @@ async function api(path, options = {}) {
 function formatBytes(bytes) { if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'; const units = ['B', 'KB', 'MB', 'GB', 'TB']; const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1); return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`; }
 function formatRemaining(expiresAt) { const ms = Number(expiresAt) - Date.now(); if (ms <= 0) return 'Expired'; const minutes = Math.ceil(ms / 60000); if (minutes < 60) return `${minutes}m left`; const hours = Math.floor(minutes / 60); if (hours < 48) return `${hours}h ${minutes % 60}m left`; const days = Math.floor(hours / 24); return `${days}d ${hours % 24}h left`; }
 function iconFor(type) { if (type?.startsWith('image/')) return '▧'; if (type?.startsWith('audio/')) return '♫'; if (type?.startsWith('video/')) return '▶'; if (type?.includes('pdf')) return 'PDF'; if (type?.startsWith('text/')) return 'T'; return 'FILE'; }
-function history() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; } }
+function getHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch { return []; } }
 function saveHistory(items) { localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 50))); }
-function rememberDrop(data) { const items = history().filter((item) => item.id !== data.id); items.unshift({ id: data.id, uploadUrl: data.uploadUrl || `${PUBLIC_ORIGIN}/u/${data.id}`, expiresAt: data.expiresAt, expiry: data.expiry || data.expiry_option || '1d', createdAt: data.createdAt || Date.now() }); saveHistory(items); }
-function forgetDrop(id) { saveHistory(history().filter((item) => item.id !== id)); }
+function rememberDrop(data) { const items = getHistory().filter((item) => item.id !== data.id); items.unshift({ id: data.id, uploadUrl: data.uploadUrl || `${PUBLIC_ORIGIN}/u/${data.id}`, expiresAt: data.expiresAt, expiry: data.expiry || data.expiry_option || '1d', createdAt: data.createdAt || Date.now() }); saveHistory(items); }
+function forgetDrop(id) { saveHistory(getHistory().filter((item) => item.id !== id)); }
 
 function renderShell() {
   document.title = 'प्रतिलिपि — Pratilipi';
@@ -50,7 +50,7 @@ function setBusy(delta) { state.busy = Math.max(0, state.busy + delta); document
 async function createDrop(expiry = $('#expiry-select')?.value || '1d') {
   const data = await api('/api/drop', { method: 'POST', body: JSON.stringify({ label: 'Pratilipi drop', expiry }) });
   state.dropId = data.id; state.uploadUrl = data.uploadUrl; state.expiresAt = data.expiresAt; state.expiry = data.expiry;
-  rememberDrop(data); history.replaceState({}, '', `${PUBLIC_ORIGIN}/u/${data.id}`); $('#session-url').value = data.uploadUrl; $('#expiry-select').value = data.expiry; $('#session-status').textContent = `Ready · ${EXPIRY_OPTIONS[data.expiry]} · ${new Date(data.expiresAt).toLocaleString()}`; return data;
+  rememberDrop(data); globalThis.history.replaceState({}, '', `${PUBLIC_ORIGIN}/u/${data.id}`); $('#session-url').value = data.uploadUrl; $('#expiry-select').value = data.expiry; $('#session-status').textContent = `Ready · ${EXPIRY_OPTIONS[data.expiry]} · ${new Date(data.expiresAt).toLocaleString()}`; return data;
 }
 async function loadDrop(dropId) { state.dropId = dropId; state.uploadUrl = `${PUBLIC_ORIGIN}/u/${dropId}`; $('#session-url').value = state.uploadUrl; const data = await api(`/api/drop/${dropId}`); state.expiresAt = Number(data.drop.expires_at); state.expiry = data.drop.expiry_option || '1d'; state.files = data.files || []; state.texts = data.texts || []; $('#expiry-select').value = state.expiry; rememberDrop({ id: dropId, uploadUrl: state.uploadUrl, expiresAt: state.expiresAt, expiry: state.expiry }); $('#session-status').textContent = `Active · ${formatRemaining(state.expiresAt)} · expires ${new Date(state.expiresAt).toLocaleString()}`; renderResults(); }
 
@@ -75,13 +75,13 @@ async function showQr(url, title = 'Pratilipi QR') { const dialog = $('#qr-dialo
 function updateTextCount() { $('#text-count').textContent = `${$('#text-input').value.length.toLocaleString()} characters`; }
 
 async function showActiveUploads() {
-  const list = $('#active-list'); const records = history(); const valid = [];
+  const list = $('#active-list'); const records = getHistory(); const valid = [];
   for (const record of records) { try { const data = await api(`/api/drop/${record.id}`); valid.push({ ...record, ...data.drop, files: data.files?.length || 0, texts: data.texts?.length || 0 }); } catch { /* expired/deleted */ } }
   saveHistory(valid.map((item) => ({ id: item.id, uploadUrl: `${PUBLIC_ORIGIN}/u/${item.id}`, expiresAt: item.expires_at, expiry: item.expiry_option, createdAt: item.created_at })));
   list.innerHTML = valid.length ? valid.map((item) => `<article class="active-card"><div><strong>Upload ${esc(item.id.slice(0, 10))}…</strong><span>${item.files + item.texts} item${item.files + item.texts === 1 ? '' : 's'} · ${esc(EXPIRY_OPTIONS[item.expiry_option] || item.expiry_option)} · ${formatRemaining(item.expires_at)}</span></div><div class="active-actions"><button data-open="${esc(item.id)}" class="primary-btn" type="button">Open</button><button data-copy-active="${esc(`${PUBLIC_ORIGIN}/u/${item.id}`)}" class="mini-btn" type="button">Copy URL</button><button data-remove-active="${esc(item.id)}" class="mini-btn danger" type="button">Remove</button></div></article>`).join('') : `<div class="empty-state">No active uploads on this browser yet.</div>`;
   list.querySelectorAll('[data-open]').forEach((button) => button.onclick = () => openDrop(button.dataset.open)); list.querySelectorAll('[data-copy-active]').forEach((button) => button.onclick = () => copyText(button.dataset.copyActive)); list.querySelectorAll('[data-remove-active]').forEach((button) => button.onclick = () => { forgetDrop(button.dataset.removeActive); showActiveUploads(); });
 }
-async function openDrop(id) { showView('home'); history.replaceState({}, '', `/u/${id}`); try { await loadDrop(id); } catch (error) { toast(error.message, 'error'); } }
+async function openDrop(id) { showView('home'); globalThis.history.replaceState({}, '', `/u/${id}`); try { await loadDrop(id); } catch (error) { toast(error.message, 'error'); } }
 function showView(view) { const active = view === 'active'; $('#home-view').hidden = active; $('#active-view').hidden = !active; $('#nav-home').classList.toggle('active', !active); $('#nav-active').classList.toggle('active', active); if (active) showActiveUploads(); }
 
 function setupEvents() {
