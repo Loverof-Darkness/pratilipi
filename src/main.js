@@ -16,12 +16,14 @@ const state = {
   expiry: '1d',
   files: [],
   texts: [],
-  busy: 0,
-  view: 'home'
+  view: 'home',
+  uploading: 0,
+  batchId: 0
 };
 
 const $ = (selector) => document.querySelector(selector);
-const esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#039;' })[char]);
+const $$ = (selector) => [...document.querySelectorAll(selector)];
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -57,6 +59,7 @@ function iconFor(type) {
   if (type?.startsWith('video/')) return 'VID';
   if (type?.includes('pdf')) return 'PDF';
   if (type?.startsWith('text/')) return 'TXT';
+  if (type?.includes('zip') || type?.includes('archive')) return 'ZIP';
   return 'FILE';
 }
 
@@ -97,24 +100,30 @@ function toast(message, kind = 'normal') {
   el.dataset.kind = kind;
   el.classList.add('show');
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => el.classList.remove('show'), 2800);
+  toast.timer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function setMode(mode) {
+  document.body.dataset.mode = mode;
 }
 
 function setBusy(delta) {
-  state.busy = Math.max(0, state.busy + delta);
-  document.body.classList.toggle('busy', state.busy > 0);
+  state.uploading = Math.max(0, state.uploading + delta);
+  document.body.classList.toggle('busy', state.uploading > 0);
 }
 
 function renderShell() {
   document.title = 'प्रतिलिपि — Pratilipi';
   document.querySelector('#app').innerHTML = `
-    <div class="space-bg" aria-hidden="true"><span class="nebula nebula-a"></span><span class="nebula nebula-b"></span><span class="stars stars-a"></span><span class="stars stars-b"></span></div>
+    <div class="space-bg" aria-hidden="true">
+      <span class="warp warp-a"></span><span class="warp warp-b"></span><span class="warp warp-c"></span>
+      <span class="stars stars-a"></span><span class="stars stars-b"></span><span class="dust"></span>
+    </div>
     <main class="site-shell">
       <header class="topbar">
         <a class="brand" href="/" aria-label="Pratilipi home">
-          <span class="brand-mark">✦</span>
-          <span class="brand-word">प्रतिलिपि</span>
-          <span class="brand-sub">Pratilipi</span>
+          <span class="brand-mark"><span>✦</span></span>
+          <span><strong class="brand-word">प्रतिलिपि</strong><small class="brand-sub">Pratilipi</small></span>
         </a>
         <nav class="top-actions" aria-label="Primary">
           <button class="nav-pill" id="nav-active" type="button">Active uploads</button>
@@ -123,98 +132,106 @@ function renderShell() {
       </header>
 
       <section id="home-view" class="home-view">
-        <div class="hero-grid">
-          <section class="upload-card">
-            <div class="upload-head">
-              <div>
-                <p class="kicker">COPY · STORE · SHARE</p>
-                <h1>Share files.<br /><span>Without the clutter.</span></h1>
-              </div>
-              <div class="status-dot" title="Ready"></div>
-            </div>
-
-            <div id="drop-zone" class="drop-zone" tabindex="0">
-              <input id="file-input" type="file" multiple hidden />
-              <div class="drop-orbit"><span>↑</span></div>
-              <h2>Select files to send</h2>
-              <p>Or drag stuff here</p>
-              <button id="choose-files" class="select-btn" type="button">Select files</button>
-              <small>Upload images, music, videos, documents and any other file type.</small>
-            </div>
-
-            <div class="quick-row">
-              <button id="paste-files" class="quick-btn" type="button">Paste from clipboard</button>
-              <button id="new-drop-inline" class="quick-btn" type="button">New drop</button>
-            </div>
-
-            <div class="privacy-strip">
-              <div class="privacy-item"><span class="privacy-icon">◷</span><div><strong>Auto-delete</strong><small>Choose 1h to 1 month</small></div></div>
-              <div class="privacy-item"><span class="privacy-icon">QR</span><div><strong>Phone ready</strong><small>Scan a QR to upload</small></div></div>
-              <div class="privacy-item"><span class="privacy-icon">↗</span><div><strong>Direct links</strong><small>No dashboard after download</small></div></div>
-            </div>
-          </section>
-
-          <aside class="side-panel">
-            <div class="side-card share-card">
-              <div class="side-card-head"><div><p class="kicker">CURRENT DROP</p><h2>Share your drop</h2></div><span class="live-badge">LIVE</span></div>
-              <div class="share-link-box"><input id="session-url" readonly aria-label="Upload URL" placeholder="Create a drop to get a link" /><button id="copy-session" class="copy-btn" type="button">Copy</button></div>
-              <div class="share-buttons"><button id="show-session-qr" class="share-btn" type="button">Show QR</button><button id="delete-drop" class="share-btn danger" type="button">Delete drop</button></div>
-              <div class="expiry-row"><label for="expiry-select">Keep files for</label><select id="expiry-select">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></div>
-              <p id="session-status" class="side-note">Create a drop by selecting a file.</p>
-            </div>
-
-            <div class="side-card text-card">
-              <div class="side-card-head"><div><p class="kicker">TEXT</p><h2>Paste anything</h2></div><span class="text-badge">TXT</span></div>
-              <textarea id="text-input" placeholder="Paste or type text here…"></textarea>
-              <div class="text-actions"><span id="text-count">0 characters</span><button id="save-text" class="select-btn small" type="button">Save text</button></div>
-              <div id="text-list" class="mini-results"></div>
-            </div>
-          </aside>
+        <div class="home-intro">
+          <p class="eyebrow">PRIVATE · TEMPORARY · SIMPLE</p>
+          <h1>Send files through<br /><span>your own wormhole.</span></h1>
+          <p class="intro-copy">Drop anything here, watch it travel, then share one clean link.</p>
         </div>
 
-        <section class="recent-section">
-          <div class="section-title-row"><div><p class="kicker">RECENT SHARES</p><h2>Active uploads</h2></div><button id="open-active" class="text-btn" type="button">View all →</button></div>
-          <div id="recent-list" class="recent-grid"></div>
-        </section>
+        <section class="wormhole-card" id="upload-card">
+          <div class="card-topline">
+            <span class="tiny-state"><i></i> Ready to send</span>
+            <label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
+          </div>
 
-        <section class="upload-results" id="upload-results" hidden>
-          <div class="section-title-row"><div><p class="kicker">YOUR FILES</p><h2>Ready to share</h2></div><span id="item-count" class="count-pill">0 items</span></div>
-          <div class="result-card">
-            <div class="file-column"><div id="file-list" class="file-list"></div></div>
-            <div class="share-column"><p class="kicker">SHARE LINK</p><h3>Your files are ready.</h3><p class="muted">Anyone with the direct link can download the selected item.</p><div class="share-link-box big"><input id="result-link" readonly /><button id="copy-result-link" class="copy-btn">Copy</button></div><div class="share-buttons"><button id="show-result-qr" class="share-btn" type="button">Show QR</button><button id="delete-result-drop" class="share-btn danger" type="button">Delete all</button></div><div class="result-meta"><span>Expires</span><strong id="result-expiry">—</strong></div></div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
+            <input id="file-input" type="file" multiple hidden />
+            <div class="wormhole-orbit" aria-hidden="true"><span class="orbit-core">↑</span><i class="orbit-ring ring-1"></i><i class="orbit-ring ring-2"></i><i class="orbit-ring ring-3"></i></div>
+            <h2>Select files to send</h2>
+            <p>Or drag stuff here</p>
+            <button id="choose-files" class="cta" type="button">Select files</button>
+            <small>Paste files with Ctrl/⌘+V · multiple files supported · no account needed</small>
+          </div>
+
+          <div class="quick-tools">
+            <button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Paste from clipboard</button>
+            <button id="paste-text-toggle" class="soft-btn" type="button"><span>T</span> Paste text</button>
+            <button id="new-drop-inline" class="soft-btn" type="button"><span>↻</span> New drop</button>
+          </div>
+
+          <div class="privacy-row">
+            <div><b>Auto-expires</b><span id="expiry-help">After 24 hours</span></div>
+            <div><b>Direct download</b><span>No dashboard on file links</span></div>
+            <div><b>QR ready</b><span>Open from your phone</span></div>
+          </div>
+
+          <div id="upload-progress" class="upload-progress" hidden>
+            <div class="progress-head"><strong>Sending your files</strong><span id="progress-total">0%</span></div>
+            <div class="progress-track"><i id="progress-bar"></i></div>
+            <div id="upload-queue" class="upload-queue"></div>
           </div>
         </section>
+
+        <section id="text-panel" class="utility-card" hidden>
+          <div class="utility-head"><div><p class="eyebrow">TEXT DROP</p><h2>Paste anything</h2></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
+          <textarea id="text-input" placeholder="Paste or type text here…"></textarea>
+          <div class="utility-footer"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
+          <div id="text-list" class="mini-results"></div>
+        </section>
+
+        <section class="recent-section">
+          <div class="section-heading"><div><p class="eyebrow">ON THIS DEVICE</p><h2>Recent drops</h2></div><button id="open-active" class="text-button" type="button">View all →</button></div>
+          <div id="recent-list" class="recent-grid"></div>
+        </section>
+      </section>
+
+      <section id="ready-view" class="ready-view" hidden>
+        <div class="ready-card" id="ready-card">
+          <span class="ready-glow"></span>
+          <p class="eyebrow">YOUR FILES ARE READY</p>
+          <div class="ready-icon" aria-hidden="true"><span>✓</span></div>
+          <h1>Your files are<br /><span>ready to share.</span></h1>
+          <p class="ready-sub">Copy the link to share your Drop.</p>
+          <div class="ready-link-row"><input id="result-link" readonly aria-label="Share link" /><button id="copy-result-link" class="cta" type="button">Copy link</button></div>
+          <div class="ready-actions"><button id="share-result" class="ready-btn" type="button">Share</button><button id="show-result-qr" class="ready-btn" type="button">Show QR</button><button id="preview-files" class="ready-btn" type="button">Preview files</button></div>
+          <div class="ready-statuses">
+            <div class="status-badge"><span class="check green">✓</span><div><strong>Uploaded</strong><small>Files are online and ready</small></div></div>
+            <div class="status-badge"><span class="check blue">✓</span><div><strong id="ready-expiry-label">Expires in 24 hours</strong><small id="ready-expiry-time">Auto-delete is enabled</small></div></div>
+          </div>
+          <div class="ready-toolbar"><button id="send-more" class="cta" type="button">Send more files</button><button id="delete-result-drop" class="ready-danger" type="button">Delete this Drop</button></div>
+          <div id="ready-files" class="ready-files" hidden></div>
+        </div>
       </section>
 
       <section id="active-view" class="active-view" hidden>
-        <div class="active-header"><div><p class="kicker">YOUR LOCAL HISTORY</p><h1>Active uploads</h1><p>Previous Drops from this browser. Expired or deleted Drops disappear automatically.</p></div><button id="active-refresh" class="share-btn" type="button">Refresh</button></div>
+        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active uploads</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
         <div id="active-list" class="active-grid"></div>
       </section>
 
-      <footer class="footer">
-        <div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div>
-        <div class="footer-links"><a href="#home">Home</a><button id="footer-active" type="button">Active uploads</button><button id="footer-new" type="button">Send files</button></div>
-      </footer>
+      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active uploads</button><button id="footer-new" type="button">Send files</button></div></footer>
     </main>
 
-    <div id="upload-queue" class="upload-queue" aria-live="polite"></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <dialog id="qr-dialog" class="qr-dialog">
-      <div class="dialog-inner"><button id="close-qr" class="close-btn" type="button" aria-label="Close">×</button><p class="kicker">SCAN WITH PHONE</p><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly /><button id="copy-qr-url" class="share-btn" type="button">Copy URL</button></div>
-    </dialog>
+    <dialog id="qr-dialog" class="qr-dialog"><div class="dialog-inner"><button id="close-qr" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">SCAN WITH PHONE</p><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly /><div class="dialog-actions"><button id="copy-qr-url" class="ready-btn" type="button">Copy URL</button><button id="close-qr-bottom" class="ready-btn" type="button">Done</button></div></div></dialog>
   `;
+  updateExpiryHelp();
+}
+
+function updateExpiryHelp() {
+  const value = $('#expiry-select')?.value || '1d';
+  $('#expiry-help').textContent = `After ${EXPIRY_OPTIONS[value]}`;
 }
 
 async function createDrop(expiry = $('#expiry-select')?.value || '1d') {
   const data = await api('/api/drop', { method: 'POST', body: JSON.stringify({ label: 'Pratilipi drop', expiry }) });
   state.dropId = data.id;
-  state.uploadUrl = data.uploadUrl;
-  state.expiresAt = data.expiresAt;
-  state.expiry = data.expiry;
+  state.uploadUrl = data.uploadUrl || `${PUBLIC_ORIGIN}/u/${data.id}`;
+  state.expiresAt = Number(data.expiresAt);
+  state.expiry = data.expiry || expiry;
   rememberDrop(data);
-  $('#session-url').value = data.uploadUrl;
-  $('#expiry-select').value = data.expiry;
-  $('#session-status').textContent = `Ready · ${EXPIRY_OPTIONS[data.expiry]} · ${new Date(data.expiresAt).toLocaleString()}`;
+  $('#expiry-select').value = state.expiry;
+  $('#expiry-select').disabled = true;
+  updateExpiryHelp();
   return data;
 }
 
@@ -225,12 +242,14 @@ async function ensureDrop() {
       state.files = existing.files || [];
       state.texts = existing.texts || [];
       state.expiresAt = Number(existing.drop.expires_at);
-      return;
+      state.expiry = existing.drop.expiry_option || state.expiry;
+      $('#expiry-select').disabled = true;
+      return existing;
     } catch {
       state.dropId = null;
     }
   }
-  await createDrop($('#expiry-select').value || '1d');
+  return createDrop($('#expiry-select').value || '1d');
 }
 
 async function loadDrop(dropId) {
@@ -242,103 +261,62 @@ async function loadDrop(dropId) {
   state.files = data.files || [];
   state.texts = data.texts || [];
   rememberDrop({ id: dropId, uploadUrl: state.uploadUrl, expiresAt: state.expiresAt, expiry: state.expiry, createdAt: data.drop.created_at });
-  $('#session-url').value = state.uploadUrl;
   $('#expiry-select').value = state.expiry;
-  $('#session-status').textContent = `Active · ${formatRemaining(state.expiresAt)} · expires ${new Date(state.expiresAt).toLocaleString()}`;
-  renderResultState();
+  $('#expiry-select').disabled = true;
+  updateExpiryHelp();
+  await renderReadyState();
 }
 
-function renderFileList() {
-  const list = $('#file-list');
-  if (!list) return;
-  if (!state.files.length) {
-    list.innerHTML = `<div class="empty-state">No files uploaded yet.</div>`;
-    return;
-  }
-  list.innerHTML = state.files.map((file) => {
-    const url = `${PUBLIC_ORIGIN}/d/${encodeURIComponent(file.id)}`;
-    return `<article class="file-row"><div class="file-icon">${esc(iconFor(file.content_type))}</div><div class="file-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>${formatBytes(Number(file.size))} · ${esc(file.content_type || file.format || 'file')}</small><div class="file-link"><input readonly value="${esc(url)}" /><button data-copy="${esc(url)}" type="button">Copy</button></div></div><div class="file-actions"><a class="open-link" href="${esc(url)}">Open</a><button data-qr="${esc(url)}" data-qr-title="${esc(file.name)}" type="button">QR</button><button data-delete-file="${esc(file.id)}" type="button">Delete</button></div></article>`;
-  }).join('');
+function setProgress(percent, activeLabel = '') {
+  const pct = Math.max(0, Math.min(100, percent));
+  $('#progress-bar').style.width = `${pct}%`;
+  $('#progress-total').textContent = activeLabel || `${Math.round(pct)}%`;
 }
 
-function renderTextList() {
-  const list = $('#text-list');
-  if (!list) return;
-  if (!state.texts.length) {
-    list.innerHTML = `<div class="mini-empty">Saved text appears here.</div>`;
-    return;
-  }
-  list.innerHTML = state.texts.map((text) => {
-    const url = `${PUBLIC_ORIGIN}/d/text/${encodeURIComponent(text.id)}`;
-    return `<article class="mini-result"><div><strong>${esc(text.content.slice(0, 70))}${text.content.length > 70 ? '…' : ''}</strong><small>${text.content.length.toLocaleString()} characters</small></div><div><button data-copy="${esc(url)}" type="button">Copy</button><a href="${esc(url)}">Open</a><button data-delete-text="${esc(text.id)}" type="button">Delete</button></div></article>`;
-  }).join('');
+function addQueueItem(file) {
+  const row = document.createElement('div');
+  row.className = 'queue-item';
+  row.innerHTML = `<span class="queue-icon">${esc(iconFor(file.type))}</span><div class="queue-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>Starting…</small><div class="queue-track"><i></i></div></div><span class="queue-pct">0%</span>`;
+  $('#upload-queue').append(row);
+  return row;
 }
 
-function renderResultState() {
-  const hasItems = state.files.length + state.texts.length > 0;
-  $('#upload-results').hidden = !hasItems;
-  $('#result-link').value = state.files[0] ? `${PUBLIC_ORIGIN}/d/${state.files[0].id}` : (state.texts[0] ? `${PUBLIC_ORIGIN}/d/text/${state.texts[0].id}` : '');
-  $('#result-expiry').textContent = state.expiresAt ? `${formatRemaining(state.expiresAt)} · ${new Date(state.expiresAt).toLocaleString()}` : '—';
-  $('#item-count').textContent = `${state.files.length + state.texts.length} item${state.files.length + state.texts.length === 1 ? '' : 's'}`;
-  renderFileList();
-  renderTextList();
-  bindDynamicActions();
+function updateQueueItem(row, percent, label) {
+  row.querySelector('.queue-track i').style.width = `${Math.max(0, Math.min(100, percent))}%`;
+  row.querySelector('.queue-pct').textContent = `${Math.round(percent)}%`;
+  row.querySelector('small').textContent = label;
 }
 
-function renderRecent() {
-  const list = $('#recent-list');
-  if (!list) return;
-  const records = getHistory().filter((item) => Number(item.expiresAt) > Date.now()).slice(0, 4);
-  if (!records.length) {
-    list.innerHTML = `<div class="recent-empty">No recent Drops yet. Select a file to create your first one.</div>`;
-    return;
-  }
-  list.innerHTML = records.map((item) => `<article class="recent-card"><div><span class="recent-label">DROP</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</small></div><div class="recent-actions"><button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button></div></article>`).join('');
-  list.querySelectorAll('[data-open-recent]').forEach((button) => button.onclick = () => openDrop(button.dataset.openRecent));
-  list.querySelectorAll('[data-delete-recent]').forEach((button) => button.onclick = () => deleteEntireDrop(button.dataset.deleteRecent, false));
+async function cloudinaryUpload(file, onProgress) {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  form.append('folder', 'pratilipi');
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', CLOUDINARY_UPLOAD_URL);
+    xhr.responseType = 'json';
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
+    };
+    xhr.onerror = () => reject(new Error('Network error while uploading to Cloudinary.'));
+    xhr.onabort = () => reject(new Error('Upload cancelled.'));
+    xhr.onload = () => {
+      const payload = xhr.response || (() => { try { return JSON.parse(xhr.responseText || '{}'); } catch { return {}; } })();
+      if (xhr.status >= 200 && xhr.status < 300) resolve(payload);
+      else reject(new Error(payload.error?.message || `Cloudinary upload failed (${xhr.status})`));
+    };
+    xhr.send(form);
+  });
 }
 
-function renderActive() {
-  const list = $('#active-list');
-  if (!list) return;
-  const records = getHistory();
-  if (!records.length) {
-    list.innerHTML = `<div class="empty-state large">No active uploads on this browser yet.</div>`;
-    return;
-  }
-  list.innerHTML = records.map((item) => `<article class="active-card"><div><span class="recent-label">ACTIVE DROP</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="select-btn small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="share-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="share-btn danger" type="button">Delete all</button></div></article>`).join('');
-  list.querySelectorAll('[data-open-active]').forEach((button) => button.onclick = () => openDrop(button.dataset.openActive));
-  list.querySelectorAll('[data-copy-active]').forEach((button) => button.onclick = () => copyText(button.dataset.copyActive));
-  list.querySelectorAll('[data-delete-active]').forEach((button) => button.onclick = () => deleteEntireDrop(button.dataset.deleteActive, false));
-}
-
-function showView(view) {
-  state.view = view;
-  const active = view === 'active';
-  $('#home-view').hidden = active;
-  $('#active-view').hidden = !active;
-  $('#nav-active').classList.toggle('active', active);
-  if (active) renderActive(); else renderRecent();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-async function uploadFile(file) {
-  setBusy(1);
-  const queue = $('#upload-queue');
-  const item = document.createElement('div');
-  item.className = 'queue-toast';
-  item.innerHTML = `<strong>${esc(file.name)}</strong><span>Uploading…</span><i></i>`;
-  queue.append(item);
+async function uploadOne(file, row) {
   try {
     await ensureDrop();
-    const form = new FormData();
-    form.append('file', file);
-    form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-    form.append('folder', 'pratilipi');
-    const response = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body: form });
-    const uploaded = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(uploaded.error?.message || `Cloudinary upload failed (${response.status})`);
-    item.querySelector('i').style.width = '75%';
+    updateQueueItem(row, 0, 'Uploading…');
+    const uploaded = await cloudinaryUpload(file, (pct) => updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`));
+    updateQueueItem(row, 100, 'Registering…');
     const done = await api(`/api/drop/${state.dropId}/complete`, {
       method: 'POST',
       body: JSON.stringify({
@@ -352,33 +330,53 @@ async function uploadFile(file) {
         format: uploaded.format || ''
       })
     });
-    item.querySelector('i').style.width = '100%';
     state.files.push(done.file);
-    renderResultState();
-    renderRecent();
-    toast(`${file.name} uploaded`);
+    updateQueueItem(row, 100, 'Uploaded');
+    row.classList.add('done');
+    return done.file;
   } catch (error) {
-    item.classList.add('error');
-    item.querySelector('span').textContent = error.message;
-    toast(error.message, 'error');
-  } finally {
-    setBusy(-1);
-    setTimeout(() => item.remove(), 1500);
+    updateQueueItem(row, 0, error.message);
+    row.classList.add('error');
+    return null;
   }
 }
 
-async function saveText() {
-  const content = $('#text-input').value;
-  if (!content.trim()) return toast('Paste some text first.', 'error');
+async function startUploadBatch(files) {
+  const valid = files.filter((file) => file instanceof File && file.size >= 0);
+  if (!valid.length || state.uploading) return;
+
+  const batch = ++state.batchId;
   setBusy(1);
+  setMode('uploading');
+  $('#upload-progress').hidden = false;
+  $('#upload-queue').innerHTML = '';
+  $('#progress-total').textContent = `0 / ${valid.length}`;
+  $('#progress-bar').style.width = '0%';
+  valid.forEach(addQueueItem);
+  const rows = $$('#upload-queue .queue-item');
+
   try {
     await ensureDrop();
-    await api(`/api/drop/${state.dropId}/text`, { method: 'POST', body: JSON.stringify({ content }) });
-    $('#text-input').value = '';
-    updateTextCount();
+    let completed = 0;
+    await Promise.all(valid.map(async (file, index) => {
+      await uploadOne(file, rows[index]);
+      completed += 1;
+      setProgress((completed / valid.length) * 100, `${completed} / ${valid.length}`);
+    }));
+
+    if (batch !== state.batchId) return;
     await refreshDrop();
-    toast('Text saved');
+    $('#upload-progress').hidden = true;
+    if (state.files.length + state.texts.length) {
+      await renderReadyState();
+      toast(completed === valid.length ? 'Drop ready to share.' : 'Some files could not be uploaded.', completed === valid.length ? 'normal' : 'error');
+    } else {
+      setMode('home');
+      toast('No files were uploaded.', 'error');
+    }
   } catch (error) {
+    $('#upload-progress').hidden = true;
+    setMode('home');
     toast(error.message, 'error');
   } finally {
     setBusy(-1);
@@ -386,37 +384,162 @@ async function saveText() {
 }
 
 async function refreshDrop() {
-  if (!state.dropId) return;
+  if (!state.dropId) return null;
   try {
     const data = await api(`/api/drop/${state.dropId}`);
     state.files = data.files || [];
     state.texts = data.texts || [];
     state.expiresAt = Number(data.drop.expires_at);
     state.expiry = data.drop.expiry_option || state.expiry;
-    $('#session-url').value = state.uploadUrl;
-    $('#expiry-select').value = state.expiry;
-    $('#session-status').textContent = `Active · ${formatRemaining(state.expiresAt)} · expires ${new Date(state.expiresAt).toLocaleString()}`;
-    renderResultState();
+    rememberDrop({ id: state.dropId, uploadUrl: state.uploadUrl, expiresAt: state.expiresAt, expiry: state.expiry });
+    return data;
   } catch (error) {
-    if (error.message.toLowerCase().includes('expired') || error.message.toLowerCase().includes('not found')) {
+    const message = error.message.toLowerCase();
+    if (message.includes('expired') || message.includes('not found')) {
       forgetDrop(state.dropId);
-      toast('This Drop has expired or was deleted.', 'error');
       state.dropId = null;
       state.files = [];
       state.texts = [];
-      $('#upload-results').hidden = true;
-      renderRecent();
+      state.uploadUrl = null;
+      state.expiresAt = null;
     }
+    throw error;
   }
+}
+
+function fileUrl(file) {
+  return `${PUBLIC_ORIGIN}/d/${encodeURIComponent(file.id)}`;
+}
+
+function textUrl(text) {
+  return `${PUBLIC_ORIGIN}/d/text/${encodeURIComponent(text.id)}`;
+}
+
+function renderReadyFiles() {
+  const list = $('#ready-files');
+  if (!list) return;
+  const entries = [
+    ...state.files.map((file) => ({ kind: 'file', id: file.id, name: file.name, type: file.content_type || '', meta: `${formatBytes(Number(file.size))} · ${file.content_type || file.format || 'file'}`, url: fileUrl(file), preview: file.content_type?.startsWith('image/') ? file.secure_url : '' })),
+    ...state.texts.map((text) => ({ kind: 'text', id: text.id, name: text.content.slice(0, 70) || 'Text', meta: `${text.content.length.toLocaleString()} characters`, url: textUrl(text) }))
+  ];
+  list.innerHTML = entries.length ? entries.map((item) => `
+    <article class="ready-file">
+      <div class="ready-file-icon">${item.preview ? `<img src="${esc(item.preview)}" alt="" />` : `<span>${esc(item.kind === 'text' ? 'TXT' : iconFor(item.type))}</span>`}</div>
+      <div class="ready-file-main"><strong title="${esc(item.name)}">${esc(item.name)}</strong><small>${esc(item.meta)}</small><input readonly value="${esc(item.url)}" /></div>
+      <div class="ready-file-actions"><button data-copy="${esc(item.url)}" type="button">Copy</button><button data-qr="${esc(item.url)}" data-qr-title="${esc(item.name)}" type="button">QR</button><a href="${esc(item.url)}">Open</a>${item.kind === 'file' ? `<button data-delete-file="${esc(item.id)}" type="button">Delete</button>` : `<button data-delete-text="${esc(item.id)}" type="button">Delete</button>`}</div>
+    </article>`).join('') : '<div class="empty-state">No uploaded items in this Drop.</div>';
+  bindDynamicActions();
+}
+
+async function renderReadyState() {
+  if (!state.files.length && !state.texts.length) return;
+  setMode('ready');
+  $('#home-view').hidden = true;
+  $('#active-view').hidden = true;
+  $('#ready-view').hidden = false;
+  const mainLink = state.files[0] ? fileUrl(state.files[0]) : textUrl(state.texts[0]);
+  $('#result-link').value = mainLink;
+  const expiryLabel = EXPIRY_OPTIONS[state.expiry] || state.expiry;
+  $('#ready-expiry-label').textContent = `Expires in ${expiryLabel.toLowerCase()}`;
+  $('#ready-expiry-time').textContent = state.expiresAt ? new Date(state.expiresAt).toLocaleString() : 'Auto-delete is enabled';
+  $('#ready-card').classList.remove('reveal');
+  requestAnimationFrame(() => $('#ready-card').classList.add('reveal'));
+  renderReadyFiles();
+  renderTextList();
+}
+
+function renderTextList() {
+  const list = $('#text-list');
+  if (!list) return;
+  if (!state.texts.length) {
+    list.innerHTML = '<div class="mini-empty">Saved text appears here.</div>';
+    return;
+  }
+  list.innerHTML = state.texts.map((text) => {
+    const url = textUrl(text);
+    return `<article class="mini-result"><div><strong>${esc(text.content.slice(0, 80))}${text.content.length > 80 ? '…' : ''}</strong><small>${text.content.length.toLocaleString()} characters</small></div><div><button data-copy="${esc(url)}" type="button">Copy</button><a href="${esc(url)}">Open</a><button data-delete-text="${esc(text.id)}" type="button">Delete</button></div></article>`;
+  }).join('');
+  bindDynamicActions();
+}
+
+async function saveText() {
+  const content = $('#text-input').value;
+  if (!content.trim()) return toast('Paste some text first.', 'error');
+  setBusy(1);
+  setMode('uploading');
+  try {
+    await ensureDrop();
+    await api(`/api/drop/${state.dropId}/text`, { method: 'POST', body: JSON.stringify({ content }) });
+    $('#text-input').value = '';
+    updateTextCount();
+    await refreshDrop();
+    $('#text-panel').hidden = false;
+    await renderReadyState();
+    toast('Text saved and ready to share.');
+  } catch (error) {
+    setMode('home');
+    toast(error.message, 'error');
+  } finally {
+    setBusy(-1);
+  }
+}
+
+function updateTextCount() {
+  $('#text-count').textContent = `${$('#text-input').value.length.toLocaleString()} characters`;
+}
+
+function toggleTextPanel(force) {
+  const panel = $('#text-panel');
+  panel.hidden = force === undefined ? !panel.hidden : !force;
+  if (!panel.hidden) setTimeout(() => $('#text-input').focus(), 60);
+}
+
+async function copyText(value) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      const input = document.createElement('textarea');
+      input.value = value;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      input.remove();
+    }
+    toast('Copied to clipboard.');
+  } catch {
+    toast('Clipboard permission was denied.', 'error');
+  }
+}
+
+async function shareCurrentDrop() {
+  const url = $('#result-link').value;
+  if (!url) return;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'प्रतिलिपि — Pratilipi', text: 'Shared from Pratilipi', url });
+      return;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+  }
+  await copyText(url);
+}
+
+async function showQr(url, title = 'Pratilipi QR') {
+  $('#qr-title').textContent = title;
+  $('#qr-url').value = url;
+  await QRCode.toCanvas($('#qr-canvas'), url, { width: 260, margin: 2, color: { dark: '#f7ecff', light: '#110a18' } });
+  $('#qr-dialog').showModal();
 }
 
 async function deleteFile(fileId) {
   if (!window.confirm('Delete this file permanently?')) return;
   try {
-    await api(`/api/drop/${state.dropId}/file/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
+    await api(`/api/drop/${encodeURIComponent(state.dropId)}/file/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
     state.files = state.files.filter((file) => file.id !== fileId);
-    renderResultState();
-    toast('File deleted');
+    await afterContentMutation();
+    toast('File deleted.');
   } catch (error) {
     toast(error.message, 'error');
   }
@@ -425,89 +548,164 @@ async function deleteFile(fileId) {
 async function deleteText(textId) {
   if (!window.confirm('Delete this saved text permanently?')) return;
   try {
-    await api(`/api/drop/${state.dropId}/text/${encodeURIComponent(textId)}`, { method: 'DELETE' });
+    await api(`/api/drop/${encodeURIComponent(state.dropId)}/text/${encodeURIComponent(textId)}`, { method: 'DELETE' });
     state.texts = state.texts.filter((text) => text.id !== textId);
-    renderResultState();
-    toast('Text deleted');
+    await afterContentMutation();
+    toast('Text deleted.');
   } catch (error) {
     toast(error.message, 'error');
   }
 }
 
-async function deleteEntireDrop(dropId, redirectHome = true) {
-  if (!window.confirm('Delete this entire Drop? All files and saved text will be permanently deleted. This cannot be undone.')) return;
+async function afterContentMutation() {
+  if (state.files.length + state.texts.length) {
+    await renderReadyState();
+  } else {
+    newDrop();
+  }
+  renderRecent();
+}
+
+async function deleteEntireDrop(dropId, goHome = true) {
+  if (!dropId) return;
+  if (!window.confirm('Delete this entire Drop? All uploaded files and saved text will be permanently deleted. This cannot be undone.')) return;
   try {
     await api(`/api/drop/${encodeURIComponent(dropId)}`, { method: 'DELETE' });
     forgetDrop(dropId);
     if (state.dropId === dropId) {
       state.dropId = null;
+      state.uploadUrl = null;
+      state.expiresAt = null;
       state.files = [];
       state.texts = [];
-      state.uploadUrl = null;
-      $('#upload-results').hidden = true;
     }
-    toast('Drop deleted');
+    toast('Drop deleted.');
     renderRecent();
-    if (redirectHome) showView('home'); else renderActive();
+    if (goHome) newDrop(); else renderActive();
   } catch (error) {
     toast(error.message, 'error');
   }
 }
 
 function bindDynamicActions() {
-  document.querySelectorAll('[data-copy]').forEach((button) => { button.onclick = () => copyText(button.dataset.copy); });
-  document.querySelectorAll('[data-qr]').forEach((button) => { button.onclick = () => showQr(button.dataset.qr, button.dataset.qrTitle); });
-  document.querySelectorAll('[data-delete-file]').forEach((button) => { button.onclick = () => deleteFile(button.dataset.deleteFile); });
-  document.querySelectorAll('[data-delete-text]').forEach((button) => { button.onclick = () => deleteText(button.dataset.deleteText); });
+  $$('[data-copy]').forEach((button) => { button.onclick = () => copyText(button.dataset.copy); });
+  $$('[data-qr]').forEach((button) => { button.onclick = () => showQr(button.dataset.qr, button.dataset.qrTitle || 'Pratilipi QR'); });
+  $$('[data-delete-file]').forEach((button) => { button.onclick = () => deleteFile(button.dataset.deleteFile); });
+  $$('[data-delete-text]').forEach((button) => { button.onclick = () => deleteText(button.dataset.deleteText); });
 }
 
-function updateTextCount() {
-  $('#text-count').textContent = `${$('#text-input').value.length.toLocaleString()} characters`;
-}
-
-async function copyText(value) {
-  try {
-    await navigator.clipboard.writeText(value);
-    toast('Copied');
-  } catch {
-    toast('Clipboard permission was denied.', 'error');
+async function recheckHistory() {
+  const history = getHistory().filter((item) => Number(item.expiresAt) > Date.now());
+  if (!history.length) {
+    saveHistory([]);
+    return [];
   }
+  const checked = await Promise.all(history.map(async (item) => {
+    try {
+      const data = await api(`/api/drop/${encodeURIComponent(item.id)}`);
+      return { ...item, expiresAt: Number(data.drop.expires_at), expiry: data.drop.expiry_option || item.expiry, uploadUrl: `${PUBLIC_ORIGIN}/u/${item.id}` };
+    } catch {
+      return null;
+    }
+  }));
+  const active = checked.filter(Boolean).filter((item) => Number(item.expiresAt) > Date.now());
+  saveHistory(active);
+  return active;
 }
 
-async function showQr(url, title = 'Pratilipi QR') {
-  $('#qr-title').textContent = title;
-  $('#qr-url').value = url;
-  await QRCode.toCanvas($('#qr-canvas'), url, { width: 260, margin: 2, color: { dark: '#f9f6ff', light: '#181020' } });
-  $('#qr-dialog').showModal();
+async function renderRecent() {
+  const list = $('#recent-list');
+  if (!list) return;
+  const records = getHistory().filter((item) => Number(item.expiresAt) > Date.now()).slice(0, 4);
+  if (!records.length) {
+    list.innerHTML = '<div class="recent-empty">No recent Drops yet. Select a file to create your first one.</div>';
+    return;
+  }
+  list.innerHTML = records.map((item) => `<article class="recent-card"><div class="recent-main"><span>DROP</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</small></div><div class="recent-actions"><button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button></div></article>`).join('');
+  $$('[data-open-recent]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openRecent); });
+  $$('[data-delete-recent]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteRecent, false); });
+}
+
+async function renderActive() {
+  const list = $('#active-list');
+  if (!list) return;
+  list.innerHTML = '<div class="loading-state">Checking your active Drops…</div>';
+  const records = await recheckHistory();
+  if (!records.length) {
+    list.innerHTML = '<div class="empty-state large">No active uploads on this browser yet.</div>';
+    return;
+  }
+  list.innerHTML = records.map((item) => `<article class="active-card"><div class="active-main"><span class="recent-label">ACTIVE DROP</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button></div></article>`).join('');
+  $$('[data-open-active]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openActive); });
+  $$('[data-copy-active]').forEach((button) => { button.onclick = () => copyText(button.dataset.copyActive); });
+  $$('[data-delete-active]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteActive, false); });
+}
+
+function showView(view) {
+  state.view = view;
+  const active = view === 'active';
+  const ready = view === 'ready';
+  $('#home-view').hidden = active || ready;
+  $('#ready-view').hidden = !ready;
+  $('#active-view').hidden = !active;
+  $('#nav-active').classList.toggle('active', active);
+  setMode(ready ? 'ready' : active ? 'home' : 'home');
+  if (active) renderActive();
+  else if (!ready) renderRecent();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function newDrop() {
+  ++state.batchId;
   state.dropId = null;
   state.uploadUrl = null;
   state.expiresAt = null;
+  state.expiry = '1d';
   state.files = [];
   state.texts = [];
-  $('#session-url').value = '';
-  $('#session-status').textContent = 'New Drop · select a file to create it.';
-  $('#upload-results').hidden = true;
+  if ($('#expiry-select')) {
+    $('#expiry-select').disabled = false;
+    $('#expiry-select').value = '1d';
+  }
+  $('#home-view').hidden = false;
+  $('#ready-view').hidden = true;
+  $('#active-view').hidden = true;
+  $('#text-panel').hidden = true;
+  $('#upload-progress').hidden = true;
+  $('#file-input').value = '';
+  setMode('home');
+  updateExpiryHelp();
+  history.replaceState({}, '', '/');
   renderRecent();
 }
 
 function setupEvents() {
-  $('#choose-files').onclick = () => $('#file-input').click();
-  $('#file-input').onchange = (event) => [...event.target.files].forEach(uploadFile);
-
   const zone = $('#drop-zone');
-  ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => { event.preventDefault(); zone.classList.add('dragover'); }));
-  ['dragleave', 'drop'].forEach((name) => zone.addEventListener(name, (event) => { event.preventDefault(); zone.classList.remove('dragover'); }));
-  zone.addEventListener('drop', (event) => [...event.dataTransfer.files].forEach(uploadFile));
-  zone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') $('#file-input').click(); });
+  $('#choose-files').onclick = () => $('#file-input').click();
+  $('#file-input').onchange = (event) => startUploadBatch([...event.target.files]);
+
+  ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
+    event.preventDefault();
+    zone.classList.add('dragover');
+    setMode('dragover');
+  }));
+  ['dragleave', 'drop'].forEach((name) => zone.addEventListener(name, (event) => {
+    event.preventDefault();
+    zone.classList.remove('dragover');
+    if (!state.uploading) setMode('home');
+  }));
+  zone.addEventListener('drop', (event) => startUploadBatch([...event.dataTransfer.files]));
+  zone.addEventListener('keydown', (event) => {
+    if (event.target !== zone) return;
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#file-input').click(); }
+  });
 
   document.addEventListener('paste', (event) => {
     const files = [...(event.clipboardData?.items || [])].map((item) => item.kind === 'file' ? item.getAsFile() : null).filter(Boolean);
-    if (files.length) { event.preventDefault(); files.forEach(uploadFile); return; }
+    if (files.length) { event.preventDefault(); startUploadBatch(files); return; }
     const text = event.clipboardData?.getData('text/plain');
     if (text && document.activeElement !== $('#text-input')) {
+      toggleTextPanel(true);
       $('#text-input').focus();
       $('#text-input').setRangeText(text, $('#text-input').selectionStart, $('#text-input').selectionEnd, 'end');
       updateTextCount();
@@ -517,31 +715,31 @@ function setupEvents() {
   $('#paste-files').onclick = async () => {
     try {
       const items = await navigator.clipboard.read();
-      let found = false;
+      const files = [];
       for (const item of items) {
-        for (const type of item.types) {
-          if (!type.startsWith('image/')) continue;
-          const blob = await item.getType(type);
-          const ext = type.split('/')[1] || 'png';
-          uploadFile(new File([blob], `clipboard-${Date.now()}.${ext}`, { type }));
-          found = true;
-        }
+        const type = item.types.find((value) => value.startsWith('image/'));
+        if (!type) continue;
+        const blob = await item.getType(type);
+        if (blob) files.push(new File([blob], `clipboard-${Date.now()}.${type.split('/')[1] || 'png'}`, { type }));
       }
-      if (!found) toast('No image files found in clipboard.', 'error');
+      if (files.length) startUploadBatch(files);
+      else toast('No files found in clipboard.', 'error');
     } catch {
       toast('Clipboard access was denied by the browser.', 'error');
     }
   };
 
+  $('#paste-text-toggle').onclick = () => toggleTextPanel(true);
+  $('#paste-text-close').onclick = () => toggleTextPanel(false);
   $('#save-text').onclick = saveText;
   $('#text-input').oninput = updateTextCount;
-  $('#copy-session').onclick = () => $('#session-url').value && copyText($('#session-url').value);
-  $('#show-session-qr').onclick = () => $('#session-url').value && showQr($('#session-url').value, 'Phone upload');
-  $('#delete-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId);
-  $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId);
-  $('#copy-result-link').onclick = () => $('#result-link').value && copyText($('#result-link').value);
-  $('#show-result-qr').onclick = () => $('#result-link').value && showQr($('#result-link').value, 'Download QR');
-  $('#expiry-select').onchange = () => { if (state.dropId) toast('Expiry is fixed for an existing Drop. Use New drop for a different duration.'); };
+  $('#copy-result-link').onclick = () => copyText($('#result-link').value);
+  $('#share-result').onclick = shareCurrentDrop;
+  $('#show-result-qr').onclick = () => $('#result-link').value && showQr($('#result-link').value, 'Pratilipi share link');
+  $('#preview-files').onclick = () => { $('#ready-files').hidden = !$('#ready-files').hidden; if (!$('#ready-files').hidden) $('#ready-files').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
+  $('#send-more').onclick = () => { newDrop(); showView('home'); };
+  $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId, true);
+  $('#expiry-select').onchange = updateExpiryHelp;
   $('#new-drop').onclick = () => { newDrop(); showView('home'); };
   $('#new-drop-inline').onclick = () => { newDrop(); showView('home'); };
   $('#open-active').onclick = () => showView('active');
@@ -550,39 +748,52 @@ function setupEvents() {
   $('#footer-new').onclick = () => { newDrop(); showView('home'); };
   $('#active-refresh').onclick = renderActive;
   $('#close-qr').onclick = () => $('#qr-dialog').close();
+  $('#close-qr-bottom').onclick = () => $('#qr-dialog').close();
   $('#copy-qr-url').onclick = () => copyText($('#qr-url').value);
 }
 
 async function openDrop(dropId) {
-  showView('home');
   history.replaceState({}, '', `/u/${dropId}`);
   try {
     await loadDrop(dropId);
+    showView('ready');
   } catch (error) {
+    showView('home');
     toast(error.message, 'error');
   }
+}
+
+function startClock() {
+  setInterval(() => {
+    if (state.expiresAt && state.view === 'ready') {
+      $('#ready-expiry-time').textContent = `Expires ${new Date(state.expiresAt).toLocaleString()} · ${formatRemaining(state.expiresAt)}`;
+    }
+    if (state.view === 'home') renderRecent();
+  }, 30000);
+  setInterval(async () => {
+    if (state.dropId && state.view === 'ready' && !state.uploading) {
+      try { await refreshDrop(); await renderReadyState(); } catch { /* next refresh will reconcile the state */ }
+    }
+  }, 20000);
 }
 
 async function boot() {
   renderShell();
   setupEvents();
-  renderRecent();
+  await renderRecent();
   const match = location.pathname.match(/\/u\/([^/]+)/);
   if (match) {
     try {
       await loadDrop(match[1]);
+      showView('ready');
     } catch (error) {
-      $('#session-status').textContent = error.message;
+      showView('home');
       toast(error.message, 'error');
     }
   } else {
     newDrop();
   }
-  setInterval(refreshDrop, 20000);
-  setInterval(() => {
-    if (state.expiresAt) $('#session-status').textContent = `Active · ${formatRemaining(state.expiresAt)} · expires ${new Date(state.expiresAt).toLocaleString()}`;
-    renderRecent();
-  }, 30000);
+  startClock();
 }
 
 boot();
