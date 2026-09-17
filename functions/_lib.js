@@ -1,4 +1,6 @@
 const TOKEN_BYTES = 18;
+const AUTH_COOKIE = 'pratilipi_session';
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const EXPIRY_OPTIONS = Object.freeze({
   '1h': 60 * 60 * 1000,
@@ -119,6 +121,104 @@ export async function destroyCloudinaryAsset(env, { publicId, resourceType = 'ra
     throw new Error(`Cloudinary deletion failed: ${data.error?.message || data.result || response.status}`);
   }
   return data;
+}
+
+function authConfigured(env) {
+  return Boolean(String(env?.PRATILIPI_LOGIN_ID || '').trim() && String(env?.PRATILIPI_PASSKEY || '').trim());
+}
+
+function base64urlEncode(value) {
+  const bytes = typeof value === 'string' ? new TextEncoder().encode(value) : value;
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64urlDecode(value) {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+async function authCryptoKey(env) {
+  const material = `${env.PRATILIPI_PASSKEY}|${env.PRATILIPI_LOGIN_ID}|pratilipi-session-v1`;
+  return crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(material),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify']
+  );
+}
+
+async function signSessionPayload(env, payload) {
+  const key = await authCryptoKey(env);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return base64urlEncode(new Uint8Array(signature));
+}
+
+async function verifySessionPayload(env, payload, signature) {
+  try {
+    const key = await authCryptoKey(env);
+    return await crypto.subtle.verify('HMAC', key, base64urlDecode(signature), new TextEncoder().encode(payload));
+  } catch {
+    return false;
+  }
+}
+
+function readCookie(request, name) {
+  const cookieHeader = request.headers.get('Cookie') || '';
+  for (const part of cookieHeader.split(';')) {
+    const [key, ...rest] = part.trim().split('=');
+    if (key === name) return rest.join('=');
+  }
+  return '';
+}
+
+export async function getAuthSession(request, env) {
+  if (!authConfigured(env)) return null;
+  const value = readCookie(request, AUTH_COOKIE);
+  if (!value) return null;
+  const separator = value.lastIndexOf('.');
+  if (separator <= 0) return null;
+  const payload = value.slice(0, separator);
+  const signature = value.slice(separator + 1);
+  if (!(await verifySessionPayload(env, payload, signature))) return null;
+
+  try {
+    const decoded = JSON.parse(new TextDecoder().decode(base64urlDecode(payload)));
+    if (!decoded || Number(decoded.exp) <= now() || decoded.sub !== env.PRATILIPI_LOGIN_ID) return null;
+    return { loginId: decoded.sub, expiresAt: Number(decoded.exp) };
+  } catch {
+    return null;
+  }
+}
+
+export async function createAuthCookie(env) {
+  const payload = base64urlEncode(JSON.stringify({
+    sub: String(env.PRATILIPI_LOGIN_ID),
+    exp: now() + SESSION_TTL_MS,
+    nonce: token(18)
+  }));
+  const signature = await signSessionPayload(env, payload);
+  const value = `${payload}.${signature}`;
+  return `${AUTH_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
+}
+
+export function clearAuthCookie() {
+  return `${AUTH_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
+}
+
+export async function requireAuth(request, env) {
+  if (!authConfigured(env)) return error('Authentication is not configured. Add PRATILIPI_LOGIN_ID and PRATILIPI_PASSKEY in Cloudflare.', 503);
+  const session = await getAuthSession(request, env);
+  if (!session) return error('Authentication required.', 401);
+  return null;
+}
+
+export function authIsConfigured(env) {
+  return authConfigured(env);
 }
 
 export async function getDrop(env, id) {
