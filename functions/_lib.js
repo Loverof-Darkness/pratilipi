@@ -132,6 +132,6 @@ export async function ensureDrop(env, id) {
   return { drop };
 }
 
-export function appOrigin(request, env) {
-  return env.APP_ORIGIN || new URL(request.url).origin;
+export function appOrigin(request) {
+  return new URL(request.url).origin;
 }
