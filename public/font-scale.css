@@ -1,69 +1,37 @@
-/* Pratilipi readability scale: larger controls and lower-section text. */
-:root {
-  --font-scale: 1.18;
+/* Responsive typography scale for Pratilipi. The Wormhole theme handles component-specific sizing. */
+:root{--font-scale:1.04}
+
+body,button,input,textarea,select{font-size:calc(1rem * var(--font-scale));line-height:1.35}
+
+/* Keep text compact where the interface needs density, while letting headings breathe. */
+.brand-word{font-size:1.24rem}
+.brand-sub{font-size:.68rem}
+.tiny-state{font-size:.9rem}
+.expiry-picker{font-size:.84rem}
+.quick-tools .soft-btn{font-size:.9rem}
+.privacy-row b{font-size:.8rem}
+.privacy-row span{font-size:.72rem}
+.ready-file-main strong{font-size:.93rem}
+.ready-file-main small{font-size:.73rem}
+.active-main h3{font-size:1.16rem}
+.active-main p{font-size:.84rem}
+.footer{font-size:.82rem}
+
+/* Long names and pasted text scale down naturally instead of overflowing. */
+.drop-zone h2,.home-intro h1,.ready-card h1,.active-header h1{overflow-wrap:anywhere}
+.ready-file-main input,.ready-link-row input{font-size:clamp(.78rem,1.35vw,.9rem)}
+.utility-card textarea{font-size:clamp(.92rem,1.5vw,1rem)}
+
+@media(max-width:820px){
+  :root{--font-scale:1.02}
+  .brand-word{font-size:1.12rem}
+  .quick-tools .soft-btn{font-size:.86rem}
 }
 
-body, button, input, textarea, select {
-  font-size: calc(1rem * var(--font-scale));
-}
-
-.brand-word { font-size: 1.38rem; }
-.brand-sub { font-size: .86rem; }
-.nav-pill { font-size: .96rem; padding: 11px 18px; }
-.kicker { font-size: .8rem; }
-.upload-head h1 { font-size: clamp(2.9rem, 5.8vw, 5.4rem); }
-.drop-zone h2 { font-size: 2.08rem; }
-.drop-zone p { font-size: 1.06rem; }
-.drop-zone small { font-size: .88rem; }
-.select-btn { font-size: 1rem; padding: 13px 20px; }
-.quick-btn { font-size: .9rem; padding: 10px 13px; }
-.privacy-item strong { font-size: .88rem; }
-.privacy-item small { font-size: .77rem; }
-.side-card-head h2 { font-size: 1.38rem; }
-.live-badge, .text-badge { font-size: .74rem; }
-.share-link-box input, .share-link-box.big input { font-size: .9rem; }
-.copy-btn { font-size: .9rem; padding: 11px 14px; }
-.share-btn, .text-btn { font-size: .9rem; padding: 10px 12px; }
-.expiry-row label { font-size: .86rem; }
-.expiry-row select { font-size: .88rem; padding: 9px 11px; }
-.side-note { font-size: .84rem; }
-.text-card textarea { font-size: 1rem; }
-.text-actions span { font-size: .82rem; }
-.mini-empty { font-size: .82rem; }
-.mini-result strong { font-size: .86rem; }
-.mini-result small { font-size: .76rem; }
-.mini-result button, .mini-result a { font-size: .78rem; }
-.result-main strong { font-size: 1.08rem; }
-.result-main span { font-size: .9rem; }
-.link-row input { font-size: .86rem; }
-.link-row button { font-size: .86rem; padding: 9px 11px; }
-.download-btn, .mini-btn { font-size: .9rem; padding: 9px 12px; }
-.count-pill { font-size: .86rem; }
-.empty-state { font-size: .95rem; }
-.footer { font-size: .88rem; }
-
-/* Lower-page/action controls: deliberately larger than the compact header controls. */
-.results-section .copy-btn,
-.results-section .share-btn,
-.results-section .text-btn,
-.results-section .download-btn,
-.results-section .mini-btn,
-.results-section .link-row button,
-.active-list .nav-pill,
-.active-list button,
-.drop-delete-btn,
-.active-delete-btn,
-.text-delete-btn {
-  font-size: .95rem !important;
-}
-
-@media (max-width: 720px) {
-  .brand-word { font-size: 1.3rem; }
-  .nav-pill { font-size: .9rem; padding: 10px 14px; }
-  .upload-head h1 { font-size: clamp(2.65rem, 13vw, 4.35rem); }
-  .drop-zone h2 { font-size: 1.88rem; }
-  .drop-zone p { font-size: 1rem; }
-  .select-btn { font-size: .98rem; }
-  .quick-btn { font-size: .86rem; }
-  .share-btn, .text-btn, .download-btn, .mini-btn { font-size: .94rem; }
+@media(max-width:560px){
+  :root{--font-scale:1}
+  body,button,input,textarea,select{line-height:1.3}
+  .brand-word{font-size:1.08rem}
+  .ready-file-main strong{font-size:.86rem}
+  .ready-file-main small{font-size:.7rem}
 }
