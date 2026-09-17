@@ -9,19 +9,44 @@ Pratilipi is a lightweight temporary sharing service for text, images, audio, vi
 ```text
 Browser
   │
-  ├── upload files ───────────────→ Cloudinary
+  ├── startup login ─────────────→ /api/auth/*
   │
-  ├── /api/* ─────────────────────→ Cloudflare Pages Functions
+  ├── upload files ──────────────→ Cloudinary
+  │
+  ├── /api/* ───────────────────→ Cloudflare Pages Functions
   │                                  │
   │                                  └── D1 metadata
   │
-  └── /d/<file-token> ────────────→ Pages Function → Cloudinary
+  └── /d/<file-token> ───────────→ Pages Function → Cloudinary
 
 Expiry cleanup
   Cloudflare Cron Worker → expired D1 Drops → Cloudinary destroy API
 ```
 
 The production application is **Cloudflare Pages only**. GitHub Pages is not used because it cannot execute the `functions/` backend. Cloudflare Pages supports a root `functions/` directory for Pages Functions. urlhttps://developers.cloudflare.com/pages/functions/get-started/
+
+## Private startup authentication
+
+Pratilipi is configured as a private tool. The browser shows a startup login screen before the application can be used.
+
+Set these **Cloudflare Pages environment secrets**:
+
+```text
+PRATILIPI_LOGIN_ID
+PRATILIPI_PASSKEY
+```
+
+Use **Production** scope for the deployed site. Keep both values server-side; they are never embedded into the frontend build.
+
+Authentication uses a signed, HTTP-only, `Secure`, `SameSite=Strict` session cookie with a 7-day lifetime. API routes, Drop pages and direct download routes reject unauthenticated requests. Logging out clears the session cookie. Changing the passkey invalidates previously issued sessions because the session signature key is derived from the configured credentials.
+
+Auth routes:
+
+```text
+/api/auth/login
+/api/auth/me
+/api/auth/logout
+```
 
 ## Cloudflare Pages setup
 
@@ -73,9 +98,11 @@ Runtime secrets:
 ```text
 CLOUDINARY_API_KEY
 CLOUDINARY_API_SECRET
+PRATILIPI_LOGIN_ID
+PRATILIPI_PASSKEY
 ```
 
-The Cloudinary API credentials are server-side only and are not embedded in the frontend.
+The Cloudinary API credentials and Pratilipi access credentials are server-side only and are not embedded in the frontend.
 
 ## Cloudinary configuration
 
@@ -124,22 +151,26 @@ The Worker deletes recorded Cloudinary assets first and removes the correspondin
 
 The download Function:
 
-1. Looks up the file in D1.
-2. Verifies the Drop still exists and has not expired.
-3. Redirects to the matching Cloudinary delivery URL.
-4. Adds Cloudinary's `fl_attachment` delivery flag so images and videos download instead of being embedded inline.
+1. Requires the Pratilipi startup session.
+2. Looks up the file in D1.
+3. Verifies the Drop still exists and has not expired.
+4. Redirects to the matching Cloudinary delivery URL.
+5. Adds Cloudinary's `fl_attachment` delivery flag so images and videos download instead of being embedded inline.
 
 Cloudinary documents `fl_attachment` as the delivery flag for attachment downloads. urlhttps://cloudinary.com/documentation/transformation_reference
 
-Text downloads use a normal `Content-Disposition: attachment` response.
+Text downloads use a normal `Content-Disposition: attachment` response and also require authentication.
 
 ## Core routes
 
 ```text
 /                         Home / new Drop
-/u/<drop-token>            Upload/share session
-/d/<file-token>            Direct file download
-/d/text/<text-token>       Direct text download
+/u/<drop-token>            Authenticated upload/share session
+/d/<file-token>            Authenticated direct file download
+/d/text/<text-token>       Authenticated direct text download
+/api/auth/login            Startup login
+/api/auth/me               Session status
+/api/auth/logout           Logout
 /api/drop                  Create Drop
 /api/drop/<id>             Read Drop
 /api/drop/<id>/complete    Register Cloudinary upload
@@ -163,12 +194,13 @@ Expiry is fixed when the Drop is created. The backend rejects expired Drops imme
 
 ## Active Uploads
 
-There are no accounts in the MVP. Active Uploads is stored in the current browser and revalidated against the server when the list is opened. Expired or deleted Drops disappear from the local history.
+There is one private Pratilipi access account configured through Cloudflare secrets. Active Uploads is still stored in the current browser and revalidated against the server when the list is opened. Expired or deleted Drops disappear from the local history.
 
 ## UI / interaction flow
 
 The current UI is a Wormhole-inspired Pratilipi experience with:
 
+- private startup login screen
 - animated cosmic/warp background
 - drag/drop and clipboard input
 - animated upload orbit
@@ -201,6 +233,8 @@ For Pages Functions locally with bindings:
 npm run build
 npx wrangler pages dev dist
 ```
+
+Set `PRATILIPI_LOGIN_ID` and `PRATILIPI_PASSKEY` in your local Wrangler environment before using the app locally.
 
 ## Important limitation
 
