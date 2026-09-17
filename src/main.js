@@ -1,8 +1,8 @@
 import QRCode from 'qrcode';
 import './styles.css';
 
-const API_BASE = (import.meta.env.VITE_API_ORIGIN || location.origin).replace(/\/$/, '');
-const PUBLIC_ORIGIN = API_BASE;
+const API_BASE = location.origin.replace(/\/$/, '');
+const PUBLIC_ORIGIN = location.origin.replace(/\/$/, '');
 const CLOUDINARY_CLOUD_NAME = 's7aopw6x';
 const CLOUDINARY_UPLOAD_PRESET = 'pratilipi';
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
