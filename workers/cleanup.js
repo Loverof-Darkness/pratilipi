@@ -8,7 +8,7 @@ export default {
 
 async function cleanupExpiredDrops(env) {
   const expired = await env.DB.prepare(
-    'SELECT id FROM drops WHERE expires_at <= ?1 LIMIT 50'
+    'SELECT id FROM drops WHERE expires_at IS NOT NULL AND expires_at <= ?1 LIMIT 100'
   ).bind(Date.now()).all();
 
   for (const drop of expired.results || []) {
@@ -16,7 +16,7 @@ async function cleanupExpiredDrops(env) {
       'SELECT id, public_id, resource_type FROM files WHERE drop_id = ?1'
     ).bind(drop.id).all();
 
-    let deleteFailed = false;
+    let deletionFailed = false;
     for (const file of files.results || []) {
       try {
         await destroyCloudinaryAsset(env, {
@@ -24,13 +24,13 @@ async function cleanupExpiredDrops(env) {
           resourceType: file.resource_type || 'raw',
           invalidate: true
         });
-      } catch (cause) {
-        deleteFailed = true;
-        console.error('Cloudinary delete failed', drop.id, file.public_id, cause);
+      } catch (error) {
+        deletionFailed = true;
+        console.error('Cloudinary delete failed', drop.id, file.public_id, error);
       }
     }
 
-    if (!deleteFailed) {
+    if (!deletionFailed) {
       await env.DB.prepare('DELETE FROM drops WHERE id = ?1').bind(drop.id).run();
     }
   }
