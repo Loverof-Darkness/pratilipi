@@ -76,6 +76,34 @@ export async function onRequest({ request, env, params }) {
       }), request);
     }
 
+    if (path.length === 2 && method === 'DELETE') {
+      const filesResult = await env.DB.prepare(
+        'SELECT id, public_id, resource_type FROM files WHERE drop_id = ?1 ORDER BY created_at ASC'
+      ).bind(dropId).all();
+      const files = filesResult.results || [];
+
+      try {
+        for (const file of files) {
+          await destroyCloudinaryAsset(env, {
+            publicId: file.public_id,
+            resourceType: file.resource_type || 'raw',
+            invalidate: true
+          });
+        }
+      } catch (cause) {
+        console.error('Drop deletion failed', dropId, cause);
+        return response(error('One or more stored files could not be deleted. Please retry.', 503), request);
+      }
+
+      await env.DB.prepare('DELETE FROM drops WHERE id = ?1').bind(dropId).run();
+      return response(json({
+        ok: true,
+        dropId,
+        deletedFiles: files.length,
+        deletedDrop: true
+      }), request);
+    }
+
     if (path.length === 3 && path[2] === 'complete' && method === 'POST') {
       const input = await body();
       const publicId = String(input.publicId || '');
@@ -127,6 +155,13 @@ export async function onRequest({ request, env, params }) {
         return response(error('Cloudinary deletion is not configured. Add the API key and secret to the Cloudflare environment.', 503), request);
       }
       await env.DB.prepare('DELETE FROM files WHERE id = ?1 AND drop_id = ?2').bind(fileId, dropId).run();
+      return response(json({ ok: true }), request);
+    }
+
+    if (path.length === 4 && path[2] === 'text' && method === 'DELETE') {
+      const textId = path[3];
+      const result = await env.DB.prepare('DELETE FROM texts WHERE id = ?1 AND drop_id = ?2').bind(textId, dropId).run();
+      if (!result.meta?.changes) return response(error('Text not found.', 404), request);
       return response(json({ ok: true }), request);
     }
   }
