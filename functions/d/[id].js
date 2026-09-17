@@ -1,4 +1,4 @@
-import { appOrigin, contentDisposition, error, ensureDrop, withCors } from '../_lib.js';
+import { contentDisposition, error, ensureDrop, withCors } from '../_lib.js';
 
 function attachmentUrl(secureUrl) {
   try {
