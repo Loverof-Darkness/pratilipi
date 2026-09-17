@@ -1,0 +1,49 @@
+/* Pratilipi readability scale: keep the Wormhole-inspired layout, increase typography. */
+:root {
+  --font-scale: 1.12;
+}
+
+body, button, input, textarea, select {
+  font-size: calc(1rem * var(--font-scale));
+}
+
+.brand-word { font-size: 1.34rem; }
+.brand-sub { font-size: .82rem; }
+.nav-pill { font-size: .9rem; padding: 10px 17px; }
+.kicker { font-size: .76rem; }
+.upload-head h1 { font-size: clamp(2.8rem, 5.6vw, 5.2rem); }
+.drop-zone h2 { font-size: 2rem; }
+.drop-zone p { font-size: 1rem; }
+.drop-zone small { font-size: .82rem; }
+.select-btn { font-size: .95rem; padding: 12px 19px; }
+.quick-btn { font-size: .82rem; }
+.privacy-item strong { font-size: .82rem; }
+.privacy-item small { font-size: .72rem; }
+.side-card-head h2 { font-size: 1.3rem; }
+.live-badge, .text-badge { font-size: .68rem; }
+.share-link-box input, .share-link-box.big input { font-size: .84rem; }
+.copy-btn, .share-btn, .text-btn { font-size: .82rem; }
+.expiry-row label { font-size: .8rem; }
+.expiry-row select { font-size: .8rem; }
+.side-note { font-size: .78rem; }
+.text-card textarea { font-size: .9rem; }
+.text-actions span { font-size: .76rem; }
+.mini-empty { font-size: .76rem; }
+.mini-result strong { font-size: .78rem; }
+.mini-result small { font-size: .7rem; }
+.result-main strong { font-size: 1rem; }
+.result-main span { font-size: .84rem; }
+.link-row input { font-size: .8rem; }
+.download-btn, .mini-btn { font-size: .82rem; }
+.count-pill { font-size: .8rem; }
+.empty-state { font-size: .88rem; }
+.footer { font-size: .82rem; }
+
+@media (max-width: 720px) {
+  .brand-word { font-size: 1.25rem; }
+  .nav-pill { font-size: .84rem; padding: 9px 13px; }
+  .upload-head h1 { font-size: clamp(2.55rem, 12vw, 4.2rem); }
+  .drop-zone h2 { font-size: 1.75rem; }
+  .drop-zone p { font-size: .94rem; }
+  .privacy-strip { grid-template-columns: 1fr; }
+}
