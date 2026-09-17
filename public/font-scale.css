@@ -1,49 +1,69 @@
-/* Pratilipi readability scale: keep the Wormhole-inspired layout, increase typography. */
+/* Pratilipi readability scale: larger controls and lower-section text. */
 :root {
-  --font-scale: 1.12;
+  --font-scale: 1.18;
 }
 
 body, button, input, textarea, select {
   font-size: calc(1rem * var(--font-scale));
 }
 
-.brand-word { font-size: 1.34rem; }
-.brand-sub { font-size: .82rem; }
-.nav-pill { font-size: .9rem; padding: 10px 17px; }
-.kicker { font-size: .76rem; }
-.upload-head h1 { font-size: clamp(2.8rem, 5.6vw, 5.2rem); }
-.drop-zone h2 { font-size: 2rem; }
-.drop-zone p { font-size: 1rem; }
-.drop-zone small { font-size: .82rem; }
-.select-btn { font-size: .95rem; padding: 12px 19px; }
-.quick-btn { font-size: .82rem; }
-.privacy-item strong { font-size: .82rem; }
-.privacy-item small { font-size: .72rem; }
-.side-card-head h2 { font-size: 1.3rem; }
-.live-badge, .text-badge { font-size: .68rem; }
-.share-link-box input, .share-link-box.big input { font-size: .84rem; }
-.copy-btn, .share-btn, .text-btn { font-size: .82rem; }
-.expiry-row label { font-size: .8rem; }
-.expiry-row select { font-size: .8rem; }
-.side-note { font-size: .78rem; }
-.text-card textarea { font-size: .9rem; }
-.text-actions span { font-size: .76rem; }
-.mini-empty { font-size: .76rem; }
-.mini-result strong { font-size: .78rem; }
-.mini-result small { font-size: .7rem; }
-.result-main strong { font-size: 1rem; }
-.result-main span { font-size: .84rem; }
-.link-row input { font-size: .8rem; }
-.download-btn, .mini-btn { font-size: .82rem; }
-.count-pill { font-size: .8rem; }
-.empty-state { font-size: .88rem; }
-.footer { font-size: .82rem; }
+.brand-word { font-size: 1.38rem; }
+.brand-sub { font-size: .86rem; }
+.nav-pill { font-size: .96rem; padding: 11px 18px; }
+.kicker { font-size: .8rem; }
+.upload-head h1 { font-size: clamp(2.9rem, 5.8vw, 5.4rem); }
+.drop-zone h2 { font-size: 2.08rem; }
+.drop-zone p { font-size: 1.06rem; }
+.drop-zone small { font-size: .88rem; }
+.select-btn { font-size: 1rem; padding: 13px 20px; }
+.quick-btn { font-size: .9rem; padding: 10px 13px; }
+.privacy-item strong { font-size: .88rem; }
+.privacy-item small { font-size: .77rem; }
+.side-card-head h2 { font-size: 1.38rem; }
+.live-badge, .text-badge { font-size: .74rem; }
+.share-link-box input, .share-link-box.big input { font-size: .9rem; }
+.copy-btn { font-size: .9rem; padding: 11px 14px; }
+.share-btn, .text-btn { font-size: .9rem; padding: 10px 12px; }
+.expiry-row label { font-size: .86rem; }
+.expiry-row select { font-size: .88rem; padding: 9px 11px; }
+.side-note { font-size: .84rem; }
+.text-card textarea { font-size: 1rem; }
+.text-actions span { font-size: .82rem; }
+.mini-empty { font-size: .82rem; }
+.mini-result strong { font-size: .86rem; }
+.mini-result small { font-size: .76rem; }
+.mini-result button, .mini-result a { font-size: .78rem; }
+.result-main strong { font-size: 1.08rem; }
+.result-main span { font-size: .9rem; }
+.link-row input { font-size: .86rem; }
+.link-row button { font-size: .86rem; padding: 9px 11px; }
+.download-btn, .mini-btn { font-size: .9rem; padding: 9px 12px; }
+.count-pill { font-size: .86rem; }
+.empty-state { font-size: .95rem; }
+.footer { font-size: .88rem; }
+
+/* Lower-page/action controls: deliberately larger than the compact header controls. */
+.results-section .copy-btn,
+.results-section .share-btn,
+.results-section .text-btn,
+.results-section .download-btn,
+.results-section .mini-btn,
+.results-section .link-row button,
+.active-list .nav-pill,
+.active-list button,
+.drop-delete-btn,
+.active-delete-btn,
+.text-delete-btn {
+  font-size: .95rem !important;
+}
 
 @media (max-width: 720px) {
-  .brand-word { font-size: 1.25rem; }
-  .nav-pill { font-size: .84rem; padding: 9px 13px; }
-  .upload-head h1 { font-size: clamp(2.55rem, 12vw, 4.2rem); }
-  .drop-zone h2 { font-size: 1.75rem; }
-  .drop-zone p { font-size: .94rem; }
-  .privacy-strip { grid-template-columns: 1fr; }
+  .brand-word { font-size: 1.3rem; }
+  .nav-pill { font-size: .9rem; padding: 10px 14px; }
+  .upload-head h1 { font-size: clamp(2.65rem, 13vw, 4.35rem); }
+  .drop-zone h2 { font-size: 1.88rem; }
+  .drop-zone p { font-size: 1rem; }
+  .select-btn { font-size: .98rem; }
+  .quick-btn { font-size: .86rem; }
+  .share-btn, .text-btn, .download-btn, .mini-btn { font-size: .94rem; }
 }
