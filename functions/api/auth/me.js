@@ -1,7 +1,21 @@
 import { authIsConfigured, getAuthSession, json, withCors } from '../../_lib.js';
 
 export async function onRequestGet({ request, env }) {
-  if (!authIsConfigured(env)) return withCors(json({ authenticated: false, configured: false }), request);
+  const loginIdConfigured = Boolean(String(env?.PRATILIPI_LOGIN_ID || '').trim());
+  const passkeyConfigured = Boolean(String(env?.PRATILIPI_PASSKEY || '').trim());
+
+  if (!loginIdConfigured || !passkeyConfigured) {
+    return withCors(json({
+      authenticated: false,
+      configured: false,
+      diagnostics: {
+        loginIdConfigured,
+        passkeyConfigured,
+        secretNamesExpected: ['PRATILIPI_LOGIN_ID', 'PRATILIPI_PASSKEY']
+      }
+    }), request);
+  }
+
   const session = await getAuthSession(request, env);
   return withCors(json({
     authenticated: Boolean(session),
