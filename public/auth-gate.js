@@ -55,6 +55,7 @@
   }
 
   async function bootstrap() {
+    if (/^\/u\/[^/]+\/?$/.test(location.pathname)) return;
     document.documentElement.classList.add('auth-locked');
     document.body.classList.add('auth-locked');
     document.body.prepend(gate);
