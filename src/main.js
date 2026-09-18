@@ -18,7 +18,8 @@ const state = {
   texts: [],
   view: 'home',
   uploading: 0,
-  batchId: 0
+  batchId: 0,
+  publicShare: false
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -428,6 +429,9 @@ function renderReadyFiles() {
       <div class="ready-file-main"><strong title="${esc(item.name)}">${esc(item.name)}</strong><small>${esc(item.meta)}</small><input readonly value="${esc(item.url)}" /></div>
       <div class="ready-file-actions"><button data-copy="${esc(item.url)}" type="button">Copy</button><button data-qr="${esc(item.url)}" data-qr-title="${esc(item.name)}" type="button">QR</button><a href="${esc(item.url)}">Open</a>${item.kind === 'file' ? `<button data-delete-file="${esc(item.id)}" type="button">Delete</button>` : `<button data-delete-text="${esc(item.id)}" type="button">Delete</button>`}</div>
     </article>`).join('') : '<div class="empty-state">No uploaded items in this Drop.</div>';
+  if (state.publicShare) {
+    list.querySelectorAll('[data-delete-file], [data-delete-text]').forEach((button) => { button.hidden = true; });
+  }
   bindDynamicActions();
 }
 
@@ -780,8 +784,17 @@ function startClock() {
 async function boot() {
   renderShell();
   setupEvents();
+  const match = location.pathname.match(/^\/u\/([^/]+)\/?$/);
+  state.publicShare = Boolean(match);
+  if (state.publicShare) {
+    document.body.classList.add('public-share');
+    $('#nav-active').hidden = true;
+    $('#new-drop').hidden = true;
+    $('.footer').hidden = true;
+    $('#send-more').hidden = true;
+    $('#delete-result-drop').hidden = true;
+  }
   await renderRecent();
-  const match = location.pathname.match(/\/u\/([^/]+)/);
   if (match) {
     try {
       await loadDrop(match[1]);
