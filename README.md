@@ -239,3 +239,5 @@ Set `PRATILIPI_LOGIN_ID` and `PRATILIPI_PASSKEY` in your local Wrangler environm
 ## Important limitation
 
 Cloudinary plan limits still apply to asset types, maximum file sizes and delivery behavior. The UI accepts arbitrary browser files, but the actual storage/delivery limits are determined by the Cloudinary account and its current configuration.
+
+<!-- cloudflare-auto-deploy-smoke-test -->
