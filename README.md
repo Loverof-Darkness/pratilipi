@@ -38,7 +38,7 @@ PRATILIPI_PASSKEY
 
 Use **Production** scope for the deployed site. Keep both values server-side; they are never embedded into the frontend build.
 
-Authentication uses a signed, HTTP-only, `Secure`, `SameSite=Strict` session cookie with a 7-day lifetime. API routes, Drop pages and direct download routes reject unauthenticated requests. Logging out clears the session cookie. Changing the passkey invalidates previously issued sessions because the session signature key is derived from the configured credentials.
+Authentication uses a signed, HTTP-only, `Secure`, `SameSite=Strict` session cookie with a 7-day lifetime. The startup session protects the private dashboard and all upload/mutation APIs. Public Drop links and direct file/text downloads do not require the startup session, so anyone who has a shared link can view and download that Drop while expiry rules are still enforced. Logging out clears the session cookie. Changing the passkey invalidates previously issued sessions because the session signature key is derived from the configured credentials.
 
 Auth routes:
 
@@ -165,9 +165,9 @@ Text downloads use a normal `Content-Disposition: attachment` response and also 
 
 ```text
 /                         Home / new Drop
-/u/<drop-token>            Authenticated upload/share session
-/d/<file-token>            Authenticated direct file download
-/d/text/<text-token>       Authenticated direct text download
+/u/<drop-token>            Public shared Drop page
+/d/<file-token>            Public direct file download
+/d/text/<text-token>       Public direct text download
 /api/auth/login            Startup login
 /api/auth/me               Session status
 /api/auth/logout           Logout
