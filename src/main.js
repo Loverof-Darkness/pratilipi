@@ -114,107 +114,100 @@ function setBusy(delta) {
 }
 
 function renderShell() {
-  document.title = 'प्रतिलिपि — Pratilipi';
-  document.querySelector('#app').innerHTML = `
-    <div class="space-bg" aria-hidden="true">
-      <span class="warp warp-a"></span><span class="warp warp-b"></span><span class="warp warp-c"></span>
-      <span class="stars stars-a"></span><span class="stars stars-b"></span><span class="dust"></span>
+  document.title = 'प्रतिलिपि — Your Files, Your Way';
+  document.querySelector('#app').innerHTML = \`
+    <div class="app-bg" aria-hidden="true">
+      <div class="nebula nebula-a"></div><div class="nebula nebula-b"></div>
+      <div class="stars stars-a"></div><div class="stars stars-b"></div>
+      <div class="glow-orb orb-a"></div><div class="glow-orb orb-b"></div>
+      <svg class="leaf-frame leaf-left" viewBox="0 0 280 720"><defs><linearGradient id="lg1" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#321bff"/><stop offset=".48" stop-color="#7d49ff"/><stop offset="1" stop-color="#36dcff"/></linearGradient></defs><path d="M36 714C77 561 31 358 105 156C134 79 181 31 238 2" fill="none" stroke="url(#lg1)" stroke-width="6"/><g fill="url(#lg1)"><path d="M78 570C22 548 7 490 15 441C57 449 92 493 78 570Z"/><path d="M74 488C25 460 19 407 42 370C80 390 92 431 74 488Z"/><path d="M92 399C44 374 39 326 62 290C99 309 110 349 92 399Z"/><path d="M119 299C81 269 82 221 108 193C141 219 148 257 119 299Z"/><path d="M151 210C128 176 138 132 168 109C190 145 183 178 151 210Z"/></g></svg>
+      <svg class="leaf-frame leaf-right" viewBox="0 0 280 720"><defs><linearGradient id="lg2" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#244fff"/><stop offset=".52" stop-color="#7540ff"/><stop offset="1" stop-color="#ef48cf"/></linearGradient></defs><path d="M275 714C249 558 286 414 216 281C181 216 147 172 73 120" fill="none" stroke="url(#lg2)" stroke-width="5"/><g fill="url(#lg2)"><path d="M235 564C292 535 306 482 294 436C252 447 218 489 235 564Z"/><path d="M224 474C271 445 275 404 257 366C221 383 209 422 224 474Z"/><path d="M207 384C245 360 248 325 232 293C200 307 190 344 207 384Z"/><path d="M185 301C216 280 219 246 201 217C175 234 168 266 185 301Z"/></g></svg>
     </div>
-    <main class="site-shell">
-      <header class="topbar">
-        <a class="brand" href="/" aria-label="Pratilipi home">
-          <span class="brand-mark"><span>✦</span></span>
-          <span><strong class="brand-word">प्रतिलिपि</strong><small class="brand-sub">Pratilipi</small></span>
-        </a>
-        <nav class="top-actions" aria-label="Primary">
-          <button class="nav-pill" id="nav-active" type="button">Active uploads</button>
-          <button class="nav-pill primary" id="new-drop" type="button">Send files</button>
-        </nav>
-      </header>
 
-      <section id="home-view" class="home-view">
-        <div class="home-intro">
-          <p class="eyebrow">PRIVATE · TEMPORARY · SIMPLE</p>
-          <h1>Send files through<br /><span>your own wormhole.</span></h1>
-          <p class="intro-copy">Drop anything here, watch it travel, then share one clean link.</p>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Pratilipi home">
+        <span class="brand-icon"><svg viewBox="0 0 64 64"><defs><linearGradient id="brandGrad" x1="0" x2="1"><stop stop-color="#ff4fe6"/><stop offset=".55" stop-color="#9b67ff"/><stop offset="1" stop-color="#52e4ff"/></linearGradient></defs><path d="M16 6h23l13 13v38H16z" fill="none" stroke="url(#brandGrad)" stroke-width="4" stroke-linejoin="round"/><path d="M39 6v14h13M24 30h17M24 38h14M24 46h11" fill="none" stroke="url(#brandGrad)" stroke-width="3" stroke-linecap="round"/></svg></span>
+        <span class="brand-copy"><strong>प्रतिलिपि</strong><small>Your Files, Your Way</small></span>
+      </a>
+
+      <nav class="primary-nav" aria-label="Primary">
+        <button class="nav-link active" id="nav-home" type="button">Home</button>
+        <button class="nav-link" id="nav-active" type="button">Active Shares</button>
+        <button class="nav-link" id="nav-about" type="button">About</button>
+      </nav>
+
+      <div class="top-right">
+        <span class="tagline">Simple <i>•</i> Secure <i>•</i> Yours</span>
+        <button class="dashboard-btn" id="access-dashboard" type="button"><span class="lock-icon">▣</span><span>Access Dashboard</span></button>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="home-page" id="home-page">
+        <div class="hero-heading">
+          <div><h1>One Platform. <span>Many Possibilities.</span></h1><p>Every Upload Tells a Story</p></div>
+          <div class="random-banner"><span class="swap-icon">⤨</span><div><strong>Random Theme Active</strong><small>Each visit shows a different style!</small></div></div>
+          <div class="script-badge">Share<br>Store<br>Anywhere <b>♥</b></div>
         </div>
 
-        <section class="wormhole-card" id="upload-card">
-          <div class="card-topline">
-            <span class="tiny-state"><i></i> Ready to send</span>
-            <label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
-          </div>
+        <div class="mode-grid">
+          <section class="mode-card file-card" id="upload-card">
+            <div class="card-title-row"><span class="step-dot violet">1</span><div><h2>Upload Files</h2><p>Select, Drag &amp; Drop or Choose Files</p></div></div>
+            <div class="visual-logo file-logo"><svg viewBox="0 0 660 180"><defs><linearGradient id="fileWord" x1="0" x2="1"><stop stop-color="#d56cff"/><stop offset=".48" stop-color="#9b7cff"/><stop offset="1" stop-color="#52eaff"/></linearGradient><filter id="fileGlow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M72 141C134 96 183 44 251 25C315 8 367 23 426 53" fill="none" stroke="#7a42ff" stroke-width="2"/><path d="M96 149C160 122 213 110 267 104C331 98 383 79 438 51" fill="none" stroke="#d04cff" stroke-width="2" opacity=".85"/><text x="332" y="119" text-anchor="middle" fill="url(#fileWord)" filter="url(#fileGlow)" font-size="91" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text><path d="M120 132C85 94 80 52 101 16C138 30 158 71 144 111C137 128 125 139 120 132Z" fill="url(#fileWord)"/><path d="M503 143C540 114 578 63 589 15C550 15 517 33 503 66C490 97 490 127 503 143Z" fill="url(#fileWord)"/><path d="M130 119C100 93 91 59 103 28M518 125C546 91 566 57 582 26" fill="none" stroke="#e2d5ff" stroke-width="3"/></svg><h3>Drop Your Files. Create Your Story.</h3></div>
 
-          <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
-            <input id="file-input" type="file" multiple hidden />
-            <div class="wormhole-orbit" aria-hidden="true"><span class="orbit-core">↑</span><i class="orbit-ring ring-1"></i><i class="orbit-ring ring-2"></i><i class="orbit-ring ring-3"></i></div>
-            <h2>Select files to send</h2>
-            <p>Or drag stuff here</p>
-            <button id="choose-files" class="cta" type="button">Select files</button>
-            <small>Paste files with Ctrl/⌘+V · multiple files supported · no account needed</small>
-          </div>
+            <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
+              <input id="file-input" type="file" multiple hidden>
+              <div class="drop-cloud">⇧</div><strong>Drag &amp; Drop files here</strong><span>or</span><button class="choose-btn" id="choose-files" type="button"><span>▱</span> Choose Files</button>
+            </div>
 
-          <div class="quick-tools">
-            <button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Paste from clipboard</button>
-            <button id="paste-text-toggle" class="soft-btn" type="button"><span>T</span> Paste text</button>
-            <button id="new-drop-inline" class="soft-btn" type="button"><span>↻</span> New drop</button>
-          </div>
+            <div class="file-type-row"><span class="type-pill c">▧<small>All File Types</small></span><span class="type-pill r">PDF<small>Images</small></span><span class="type-pill b">▤<small>Docs</small></span><span class="type-pill p">▣<small>Videos</small></span><span class="type-pill m">♫<small>Audio</small></span><span class="type-pill o">▦<small>Archives</small></span><span class="type-pill v">◌<small>Others</small></span></div>
+            <div class="card-bottom-row"><button class="ghost-btn" id="paste-files" type="button">⌘ &nbsp; Paste</button><label class="expiry-label">Keep for <select id="expiry-select"><option value="1h">1 Hour</option><option value="12h">12 Hours</option><option value="1d" selected>1 Day</option><option value="1w">1 Week</option><option value="1m">1 Month</option></select></label></div>
+          </section>
 
-          <div class="privacy-row">
-            <div><b>Auto-expires</b><span id="expiry-help">After 24 hours</span></div>
-            <div><b>Direct download</b><span>No dashboard on file links</span></div>
-            <div><b>QR ready</b><span>Open from your phone</span></div>
-          </div>
+          <div class="or-separator"><span>OR</span></div>
 
-          <div id="upload-progress" class="upload-progress" hidden>
-            <div class="progress-head"><strong>Sending your files</strong><span id="progress-total">0%</span></div>
-            <div class="progress-track"><i id="progress-bar"></i></div>
-            <div id="upload-queue" class="upload-queue"></div>
-          </div>
-        </section>
-
-        <section id="text-panel" class="utility-card" hidden>
-          <div class="utility-head"><div><p class="eyebrow">TEXT DROP</p><h2>Paste anything</h2></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
-          <textarea id="text-input" placeholder="Paste or type text here…"></textarea>
-          <div class="utility-footer"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
-          <div id="text-list" class="mini-results"></div>
-        </section>
-
-        <section class="recent-section">
-          <div class="section-heading"><div><p class="eyebrow">ON THIS DEVICE</p><h2>Recent drops</h2></div><button id="open-active" class="text-button" type="button">View all →</button></div>
-          <div id="recent-list" class="recent-grid"></div>
-        </section>
-      </section>
-
-      <section id="ready-view" class="ready-view" hidden>
-        <div class="ready-card" id="ready-card">
-          <span class="ready-glow"></span>
-          <p class="eyebrow">YOUR FILES ARE READY</p>
-          <div class="ready-icon" aria-hidden="true"><span>✓</span></div>
-          <h1>Your files are<br /><span>ready to share.</span></h1>
-          <p class="ready-sub">Copy the link to share your Drop.</p>
-          <div class="ready-link-row"><input id="result-link" readonly aria-label="Share link" /><button id="copy-result-link" class="cta" type="button">Copy link</button></div>
-          <div class="ready-actions"><button id="share-result" class="ready-btn" type="button">Share</button><button id="show-result-qr" class="ready-btn" type="button">Show QR</button><button id="preview-files" class="ready-btn" type="button">Preview files</button></div>
-          <div class="ready-statuses">
-            <div class="status-badge"><span class="check green">✓</span><div><strong>Uploaded</strong><small>Files are online and ready</small></div></div>
-            <div class="status-badge"><span class="check blue">✓</span><div><strong id="ready-expiry-label">Expires in 24 hours</strong><small id="ready-expiry-time">Auto-delete is enabled</small></div></div>
-          </div>
-          <div class="ready-toolbar"><button id="send-more" class="cta" type="button">Send more files</button><button id="delete-result-drop" class="ready-danger" type="button">Delete this Drop</button></div>
-          <div id="ready-files" class="ready-files" hidden></div>
+          <section class="mode-card text-card" id="text-panel">
+            <div class="card-title-row"><span class="step-dot gold">1</span><div><h2>Paste Text</h2><p>Write, Share &amp; Preserve</p></div></div>
+            <div class="visual-logo text-logo"><svg viewBox="0 0 660 180"><defs><linearGradient id="textWord" x1="0" x2="1"><stop stop-color="#ffe267"/><stop offset=".52" stop-color="#ffb74b"/><stop offset="1" stop-color="#ff4b2e"/></linearGradient><filter id="textGlow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><text x="325" y="121" text-anchor="middle" fill="url(#textWord)" filter="url(#textGlow)" font-size="92" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text><path d="M121 132C83 94 80 52 100 14C141 27 155 69 139 111C133 126 125 139 121 132Z" fill="url(#textWord)"/><path d="M513 143C550 123 579 95 596 65C620 24 614 -5 590 5C552 18 527 44 512 80C499 105 500 129 513 143Z" fill="none" stroke="url(#textWord)" stroke-width="14" stroke-linecap="round"/><path d="M540 32C569 41 584 58 596 80C570 89 547 82 526 65" fill="none" stroke="#ff6a30" stroke-width="7" stroke-linecap="round"/></svg><h3>Write. Share. Preserve.</h3></div>
+            <textarea id="text-input" placeholder="Paste your text here..."></textarea>
+            <div class="text-count" id="text-count">0 characters</div>
+            <div class="text-chip-row"><button class="text-chip" data-template="Notes" type="button"><span>▣</span> Notes</button><button class="text-chip" data-template="Code" type="button"><span>&lt;/&gt;</span> Code</button><button class="text-chip" data-template="Ideas" type="button"><span>◉</span> Ideas</button><button class="text-chip" data-template="Content" type="button"><span>▤</span> Content</button></div>
+            <button class="save-text-btn" id="save-text" type="button">Save Text</button>
+          </section>
         </div>
+
+        <section class="upload-status-panel" id="upload-progress" hidden>
+          <div class="status-steps"><div class="status-step active"><span class="ring"></span><span>Preparing your files...</span></div><div class="status-step active"><span class="ring"></span><span>Uploading to cloud...</span></div><div class="status-step"><span class="ring"></span><span>Processing...</span></div><div class="status-step"><span class="ring"></span><span>Creating your Pratilipi...</span></div></div>
+          <div class="status-main"><div class="status-art"><div class="upload-mark">प्रतिलिपि</div><p>Uploading your files...</p><div class="progress-track"><i id="progress-bar"></i></div><div class="progress-value" id="progress-percent">0%</div></div></div>
+          <div class="status-side"><div class="status-metric"><span>▱</span><strong id="progress-files">0 files</strong></div><div class="status-metric"><span>♧</span><strong id="progress-bytes">0 B / 0 B</strong></div><div class="status-metric"><span>◷</span><strong id="progress-time">Estimated time: —</strong></div><button class="cancel-btn" id="cancel-upload" type="button"><span>■</span> Cancel Upload</button></div>
+          <div class="upload-queue" id="upload-queue"></div>
+        </section>
+
+        <section class="success-panel" id="success-panel" hidden>
+          <div class="success-left"><div class="success-check">✓</div><div><h3>Your Pratilipi Created!</h3><p>Your files have been uploaded successfully.</p></div></div>
+          <div class="success-actions"><button class="success-btn primary" id="preview-files" type="button">◉ &nbsp; View Files</button><button class="success-btn" id="copy-result-link" type="button">↗ &nbsp; Copy Share Link</button><button class="success-btn" id="show-result-qr" type="button">▦ &nbsp; Show QR Code</button><button class="success-btn" id="download-zip" type="button">⇩ &nbsp; Download All (ZIP)</button></div>
+          <input id="result-link" hidden readonly>
+          <div id="ready-files" class="ready-files-hidden" hidden></div>
+        </section>
+
+        <section class="home-footer-note"><span>Simple Sharing. Beautifully Done.</span><i></i><b>— MORE THAN FILES — IT'S YOUR STORY —</b><i></i><strong>Built for You ♥</strong></section>
       </section>
 
-      <section id="active-view" class="active-view" hidden>
-        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active uploads</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
-        <div id="active-list" class="active-grid"></div>
+      <section class="view-page" id="active-view" hidden>
+        <div class="page-head"><div><div class="mini-kicker">YOUR LOCAL HISTORY</div><h2>Active Shares</h2><p>Pratilipi rechecks these Drops with the server whenever you open this list.</p></div><button class="secondary-btn" id="active-refresh" type="button">Refresh</button></div>
+        <div id="active-list" class="active-list"></div>
       </section>
 
-      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active uploads</button><button id="footer-new" type="button">Send files</button></div></footer>
+      <footer class="footer"><span>प्रतिलिपि • Temporary sharing, beautifully done.</span><div><button id="footer-active" type="button">Active Shares</button><button id="footer-new" type="button">Home</button></div></footer>
     </main>
 
+    <dialog class="modal" id="auth-dialog"><div class="modal-inner auth-inner"><button class="modal-close" data-close="auth-dialog" type="button">×</button><div class="modal-icon">▣</div><div class="modal-kicker">SECURE DASHBOARD ACCESS</div><h3>Unlock Pratilipi</h3><p>Enter your private Access ID and passkey to create and manage Drops.</p><form id="auth-form"><label>Access ID<input id="auth-id" autocomplete="username" required></label><label>Passkey<div class="pass-wrap"><input id="auth-pass" type="password" autocomplete="current-password" required><button type="button" id="toggle-pass">Show</button></div></label><div class="auth-error" id="auth-error"></div><button class="save-text-btn" id="auth-submit" type="submit">Access Dashboard</button></form></div></dialog>
+    <dialog class="modal" id="about-dialog"><div class="modal-inner"><button class="modal-close" data-close="about-dialog" type="button">×</button><div class="modal-kicker">ABOUT PRATILIPI</div><h3>More Than Files. It's Your Story.</h3><p>Pratilipi is a private, temporary sharing space for files and text with direct public share links. Drops expire automatically.</p><div class="about-grid"><span>Temporary Drops</span><span>Direct Downloads</span><span>QR Sharing</span><span>Public Share Links</span></div></div></dialog>
+    <dialog class="modal" id="review-dialog"><div class="modal-inner"><button class="modal-close" data-close="review-dialog" type="button">×</button><div class="modal-kicker">REVIEW BEFORE UPLOAD</div><h3>Ready to upload?</h3><p>Nothing is sent until you press Upload Files.</p><div id="review-list" class="review-list"></div><div class="modal-actions"><button class="secondary-btn" data-close="review-dialog" type="button">Cancel</button><button class="save-text-btn" id="confirm-upload" type="button">Upload Files</button></div></div></dialog>
+    <dialog class="modal" id="files-dialog"><div class="modal-inner"><button class="modal-close" data-close="files-dialog" type="button">×</button><div class="modal-kicker">YOUR PRATILIPI</div><h3>Files in this Drop</h3><div id="files-list" class="modal-files-list"></div></div></dialog>
+    <dialog class="modal qr-modal" id="qr-dialog"><div class="modal-inner"><button class="modal-close" data-close="qr-dialog" type="button">×</button><div class="modal-kicker">SCAN WITH PHONE</div><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly><div class="modal-actions"><button class="secondary-btn" id="copy-qr-url" type="button">Copy URL</button><button class="save-text-btn" data-close="qr-dialog" type="button">Done</button></div></div></dialog>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <dialog id="qr-dialog" class="qr-dialog"><div class="dialog-inner"><button id="close-qr" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">SCAN WITH PHONE</p><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly /><div class="dialog-actions"><button id="copy-qr-url" class="ready-btn" type="button">Copy URL</button><button id="close-qr-bottom" class="ready-btn" type="button">Done</button></div></div></dialog>
-  `;
+  \`;
   updateExpiryHelp();
 }
 
