@@ -143,69 +143,38 @@ function renderShell() {
       <section id="home-view" class="home-view">
         <div class="home-intro">
           <p class="eyebrow">PRIVATE · TEMPORARY · SIMPLE</p>
-          <h1>Send files through<br /><span>your own wormhole.</span></h1>
-          <p class="intro-copy">Drop anything here, watch it travel, then share one clean link.</p>
+          <h1>One platform.<br /><span>Many possibilities.</span></h1>
+          <p class="intro-copy">Share files or preserve text through your own Pratilipi.</p>
         </div>
-
-        <section class="wormhole-card file-theme" id="upload-card">
-          <div class="card-topline">
-            <span class="tiny-state"><i></i> Ready to send</span>
-            <label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
-          </div>
-
-          <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
-            <input id="file-input" type="file" multiple hidden />
-            <div class="wormhole-orbit" aria-hidden="true"><span class="orbit-core">↑</span><i class="orbit-ring ring-1"></i><i class="orbit-ring ring-2"></i><i class="orbit-ring ring-3"></i></div>
-            <h2>Select files to send</h2>
-            <p>Or drag stuff here</p>
-            <button id="choose-files" class="cta" type="button">Select files</button>
-            <small>Paste files with Ctrl/⌘+V · multiple files supported · no account needed</small>
-          </div>
-
-          <div class="quick-tools">
-            <button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Paste from clipboard</button>
-            <button id="paste-text-toggle" class="soft-btn text-theme-trigger" type="button"><span>T</span> Paste text</button>
-            <button id="new-drop-inline" class="soft-btn" type="button"><span>↻</span> New drop</button>
-          </div>
-
-          <div class="privacy-row">
-            <div><b>Auto-expires</b><span id="expiry-help">After 24 hours</span></div>
-            <div><b>Direct download</b><span>No dashboard on file links</span></div>
-            <div><b>QR ready</b><span>Open from your phone</span></div>
-          </div>
-
-          <div id="upload-progress" class="upload-progress" hidden>
-            <div class="progress-head"><strong>Sending your files</strong><div class="progress-head-actions"><span id="progress-total">0%</span><button id="cancel-upload" class="upload-cancel" type="button">Cancel</button></div></div>
-            <div class="progress-track"><i id="progress-bar"></i></div>
-            <div id="upload-queue" class="upload-queue"></div>
-          </div>
-        </section>
-
-        <section id="text-panel" class="utility-card text-theme-panel" hidden>
-          <div class="text-theme-art" aria-hidden="true"><span class="text-dragon">⌁</span><span class="text-feather">❧</span><strong>प्रतिलिपि</strong></div>
-          <div class="utility-head"><div><p class="eyebrow">TEXT DROP · D9</p><h2>Write. Share. Preserve.</h2><small>Copy & paste your text below</small></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
-          <textarea id="text-input" placeholder="Paste your text here…"></textarea>
-          <div class="utility-footer"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
-          <div id="text-list" class="mini-results"></div>
-        </section>
-
-        <section id="upload-scene" class="upload-scene" hidden aria-live="polite">
-          <div class="upload-scene-art">
-            <span class="upload-decoration upload-decoration-a" aria-hidden="true"></span>
-            <span class="upload-decoration upload-decoration-b" aria-hidden="true"></span>
-            <div class="upload-logo" id="upload-logo" data-theme="d4">
-              <span class="upload-logo-outline" aria-hidden="true">प्रतिलिपि</span>
-              <span class="upload-logo-fill" id="upload-logo-fill" aria-hidden="true">प्रतिलिपि</span>
+        <div class="home-mode-grid">
+          <section class="mode-card file-theme" id="upload-card">
+            <div class="mode-card-head"><span class="mode-badge">1</span><div><p class="eyebrow">UPLOAD FILES · D4</p><h2>Drop your files, create your story.</h2><p>Select, drag & drop or paste files.</p></div></div>
+            <div class="mode-logo mode-logo-d4" aria-hidden="true"><span>प्रतिलिपि</span><i>❧</i></div>
+            <div class="mode-drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
+              <input id="file-input" type="file" multiple hidden />
+              <div class="mode-upload-icon">↑</div><h3>Drag & Drop files here</h3><span>or</span>
+              <button id="choose-files" class="cta" type="button">Choose files</button>
+              <small>Select, drag & drop, or use Ctrl/⌘+V</small>
             </div>
-            <p class="upload-scene-label" id="upload-scene-label">Uploading your files…</p>
-            <strong class="upload-percent" id="upload-scene-percent">0%</strong>
-            <p class="upload-scene-sub" id="upload-scene-sub">Preparing your Pratilipi</p>
-          </div>
+            <div class="mode-footer-tools"><button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Copy & Paste</button><label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for"><option value="1h">1 Hour</option><option value="12h">12 Hours</option><option value="1d" selected>1 Day</option><option value="1w">1 Week</option><option value="1m">1 Month</option></select></label></div>
+            <div class="mode-hints"><span>Any file type</span><span>Multiple files</span><span>QR ready</span></div>
+          </section>
+          <section id="text-panel" class="mode-card text-theme-panel" aria-label="Paste text">
+            <div class="mode-card-head"><span class="mode-badge text-badge">1</span><div><p class="eyebrow">PASTE TEXT · D9</p><h2>Write. Share. Preserve.</h2><p>Copy & paste your text below.</p></div></div>
+            <div class="mode-logo mode-logo-d9" aria-hidden="true"><span>प्रतिलिपि</span><i>⌁</i></div>
+            <textarea id="text-input" placeholder="Paste your text here…"></textarea>
+            <div class="text-tools"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
+            <div id="text-list" class="mini-results"></div>
+            <div class="mode-hints text-hints"><span>Notes</span><span>Code</span><span>Ideas</span><span>Content</span></div>
+          </section>
+        </div>
+        <div class="home-random-note"><strong>✦ Random theme on every upload</strong><span>D4 feather or D9 dragon — your upload scene is selected automatically.</span></div>
+        <section id="upload-scene" class="upload-scene" hidden aria-live="polite">
+          <div class="upload-scene-art"><span class="upload-decoration upload-decoration-a" aria-hidden="true"></span><span class="upload-decoration upload-decoration-b" aria-hidden="true"></span><div class="upload-logo" id="upload-logo" data-theme="d4"><span class="upload-logo-outline" aria-hidden="true">प्रतिलिपि</span><span class="upload-logo-fill" id="upload-logo-fill" aria-hidden="true">प्रतिलिपि</span></div><p class="upload-scene-label" id="upload-scene-label">Uploading your files…</p><strong class="upload-percent" id="upload-scene-percent">0%</strong><p class="upload-scene-sub" id="upload-scene-sub">Preparing your Pratilipi</p></div>
           <div class="upload-progress-track"><i id="upload-scene-bar"></i></div>
           <div class="upload-scene-meta"><span id="upload-scene-count">0 / 0 files</span><span id="upload-scene-bytes">0 B / 0 B</span><button id="cancel-upload-scene" class="upload-cancel" type="button">Cancel upload</button></div>
           <div id="upload-queue" class="upload-queue upload-scene-queue"></div>
         </section>
-
       </section>
 
       <section id="upload-complete-view" class="upload-complete-view" hidden>
@@ -640,8 +609,8 @@ function updateTextCount() {
 
 function toggleTextPanel(force) {
   const panel = $('#text-panel');
-  panel.hidden = force === undefined ? !panel.hidden : !force;
-  if (!panel.hidden) setTimeout(() => $('#text-input').focus(), 60);
+  panel.hidden = false;
+  if (force !== false) setTimeout(() => $('#text-input').focus(), 60);
 }
 
 async function copyText(value) {
@@ -829,7 +798,7 @@ function newDrop() {
   $('#active-view').hidden = true;
   $('#upload-scene').hidden = true;
   $('#upload-complete-view').hidden = true;
-  $('#text-panel').hidden = true;
+  $('#text-panel').hidden = false;
   $('#upload-progress').hidden = true;
   $('#ready-card').classList.remove('reveal');
   $('#file-input').value = '';
@@ -900,8 +869,8 @@ function setupEvents() {
     }
   };
 
-  $('#paste-text-toggle').onclick = () => toggleTextPanel(true);
-  $('#paste-text-close').onclick = () => toggleTextPanel(false);
+  $('#paste-text-toggle')?.addEventListener('click', () => toggleTextPanel(true));
+  $('#paste-text-close')?.addEventListener('click', () => toggleTextPanel(false));
   $('#save-text').onclick = saveText;
   $('#text-input').oninput = updateTextCount;
   $('#copy-result-link').onclick = () => copyText($('#result-link').value);
