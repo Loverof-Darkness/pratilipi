@@ -21,7 +21,8 @@ const state = {
   batchId: 0,
   publicShare: false,
   uploadController: null,
-  pendingFiles: []
+  pendingFiles: [],
+  uploadTheme: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -146,7 +147,7 @@ function renderShell() {
           <p class="intro-copy">Drop anything here, watch it travel, then share one clean link.</p>
         </div>
 
-        <section class="wormhole-card" id="upload-card">
+        <section class="wormhole-card file-theme" id="upload-card">
           <div class="card-topline">
             <span class="tiny-state"><i></i> Ready to send</span>
             <label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
@@ -163,7 +164,7 @@ function renderShell() {
 
           <div class="quick-tools">
             <button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Paste from clipboard</button>
-            <button id="paste-text-toggle" class="soft-btn" type="button"><span>T</span> Paste text</button>
+            <button id="paste-text-toggle" class="soft-btn text-theme-trigger" type="button"><span>T</span> Paste text</button>
             <button id="new-drop-inline" class="soft-btn" type="button"><span>↻</span> New drop</button>
           </div>
 
@@ -180,13 +181,40 @@ function renderShell() {
           </div>
         </section>
 
-        <section id="text-panel" class="utility-card" hidden>
-          <div class="utility-head"><div><p class="eyebrow">TEXT DROP</p><h2>Paste anything</h2></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
-          <textarea id="text-input" placeholder="Paste or type text here…"></textarea>
+        <section id="text-panel" class="utility-card text-theme-panel" hidden>
+          <div class="text-theme-art" aria-hidden="true"><span class="text-dragon">⌁</span><span class="text-feather">❧</span><strong>प्रतिलिपि</strong></div>
+          <div class="utility-head"><div><p class="eyebrow">TEXT DROP · D9</p><h2>Write. Share. Preserve.</h2><small>Copy & paste your text below</small></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
+          <textarea id="text-input" placeholder="Paste your text here…"></textarea>
           <div class="utility-footer"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
           <div id="text-list" class="mini-results"></div>
         </section>
 
+        <section id="upload-scene" class="upload-scene" hidden aria-live="polite">
+          <div class="upload-scene-art">
+            <span class="upload-decoration upload-decoration-a" aria-hidden="true"></span>
+            <span class="upload-decoration upload-decoration-b" aria-hidden="true"></span>
+            <div class="upload-logo" id="upload-logo" data-theme="d4">
+              <span class="upload-logo-outline" aria-hidden="true">प्रतिलिपि</span>
+              <span class="upload-logo-fill" id="upload-logo-fill" aria-hidden="true">प्रतिलिपि</span>
+            </div>
+            <p class="upload-scene-label" id="upload-scene-label">Uploading your files…</p>
+            <strong class="upload-percent" id="upload-scene-percent">0%</strong>
+            <p class="upload-scene-sub" id="upload-scene-sub">Preparing your Pratilipi</p>
+          </div>
+          <div class="upload-progress-track"><i id="upload-scene-bar"></i></div>
+          <div class="upload-scene-meta"><span id="upload-scene-count">0 / 0 files</span><span id="upload-scene-bytes">0 B / 0 B</span><button id="cancel-upload-scene" class="upload-cancel" type="button">Cancel upload</button></div>
+          <div id="upload-queue" class="upload-queue upload-scene-queue"></div>
+        </section>
+
+      </section>
+
+      <section id="upload-complete-view" class="upload-complete-view" hidden>
+        <div class="upload-complete-card">
+          <div class="upload-complete-mark">✓</div>
+          <p class="eyebrow">TRANSFER COMPLETE</p>
+          <h2>Your Pratilipi Created!</h2>
+          <p>Everything is uploaded and ready to share.</p>
+        </div>
       </section>
 
       <section id="ready-view" class="ready-view" hidden>
@@ -270,6 +298,15 @@ async function loadDrop(dropId) {
   $('#expiry-select').disabled = true;
   updateExpiryHelp();
   await renderReadyState();
+}
+
+function setUploadSceneProgress(percent, bytes, totalBytes, completed, totalFiles) {
+  const pct = Math.max(0, Math.min(100, percent));
+  $('#upload-logo-fill').style.clipPath = `inset(${100 - pct}% 0 0 0)`;
+  $('#upload-scene-bar').style.width = `${pct}%`;
+  $('#upload-scene-percent').textContent = `${Math.round(pct)}%`;
+  $('#upload-scene-bytes').textContent = `${formatBytes(bytes)} / ${formatBytes(totalBytes)}`;
+  $('#upload-scene-count').textContent = `${completed} / ${totalFiles} files`;
 }
 
 function setProgress(percent, activeLabel = '') {
@@ -393,12 +430,23 @@ async function startUploadBatch(files) {
   const batch = ++state.batchId;
   const controller = new AbortController();
   state.uploadController = controller;
+  state.uploadTheme = Math.random() < 0.5 ? 'd4' : 'd9';
   setBusy(1);
   setMode('uploading');
-  $('#upload-progress').hidden = false;
+  $('#home-view').hidden = true;
+  $('#ready-view').hidden = true;
+  $('#active-view').hidden = true;
+  $('#upload-complete-view').hidden = true;
+  $('#upload-scene').hidden = false;
+  $('#upload-logo').dataset.theme = state.uploadTheme;
+  $('#upload-logo').classList.remove('is-complete');
+  $('#upload-scene-label').textContent = state.uploadTheme === 'd4' ? 'Uploading your files…' : 'Your Pratilipi is taking shape…';
+  $('#upload-scene-sub').textContent = state.uploadTheme === 'd4' ? 'Feathers in motion · transfer in progress' : 'Dragon flame engaged · transfer in progress';
+  $('#upload-scene-queue').innerHTML = '';
   $('#upload-queue').innerHTML = '';
-  $('#progress-total').textContent = `0 / ${valid.length}`;
-  $('#progress-bar').style.width = '0%';
+  $('#upload-scene-percent').textContent = '0%';
+  $('#upload-scene-bar').style.width = '0%';
+  $('#upload-logo-fill').style.clipPath = 'inset(100% 0 0 0)';
   valid.forEach(addQueueItem);
   const rows = $$('#upload-queue .queue-item');
 
@@ -412,8 +460,8 @@ async function startUploadBatch(files) {
 
     const updateOverallProgress = () => {
       const bytes = uploadedBytes.reduce((sum, value) => sum + value, 0);
-      const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0;
-      setProgress(percent, percent.toFixed(0) + '%');
+      const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 100;
+      setUploadSceneProgress(percent, bytes, totalBytes, completed, valid.length);
     };
 
     updateOverallProgress();
@@ -423,6 +471,7 @@ async function startUploadBatch(files) {
         uploadedBytes[index] = file.size * (pct / 100);
         updateOverallProgress();
       }, controller.signal, uploadedAssets);
+
       if (uploaded) {
         uploadedBytes[index] = file.size;
         succeeded += 1;
@@ -431,10 +480,6 @@ async function startUploadBatch(files) {
       }
       completed += 1;
       updateOverallProgress();
-      setProgress(
-        totalBytes > 0 ? (uploadedBytes.reduce((sum, value) => sum + value, 0) / totalBytes) * 100 : 100,
-        completed + ' / ' + valid.length + ' complete'
-      );
     }));
 
     if (controller.signal.aborted) {
@@ -449,23 +494,31 @@ async function startUploadBatch(files) {
         console.error('Cancelled upload cleanup failed', cleanupError);
         toast('Upload cancelled, but some temporary files could not be cleaned up.', 'error');
       }
-      $('#upload-progress').hidden = true;
+      $('#upload-scene').hidden = true;
       setMode('home');
       toast(succeeded ? `Upload cancelled. ${succeeded} file(s) completed.` : 'Upload cancelled.');
       return;
     }
+
     if (batch !== state.batchId) return;
+
     await refreshDrop();
-    $('#upload-progress').hidden = true;
-    if (state.files.length + state.texts.length) {
+    if (succeeded === valid.length && state.files.length + state.texts.length) {
+      setUploadSceneProgress(100, totalBytes, totalBytes, valid.length, valid.length);
+      $('#upload-logo').classList.add('is-complete');
+      $('#upload-scene-label').textContent = 'Your Pratilipi Created!';
+      $('#upload-scene-sub').textContent = state.uploadTheme === 'd4' ? 'Your files are ready to travel.' : 'Your story is ready to travel.';
+      await new Promise((resolve) => setTimeout(resolve, 1050));
+      $('#upload-scene').hidden = true;
       await renderReadyState();
-      toast(succeeded === valid.length ? 'Drop ready to share.' : `${succeeded} of ${valid.length} files uploaded.`, succeeded === valid.length ? 'normal' : 'error');
+      toast('Pratilipi created. Ready to share.');
     } else {
+      $('#upload-scene').hidden = true;
       setMode('home');
-      toast('No files were uploaded.', 'error');
+      toast(succeeded ? `${succeeded} of ${valid.length} files uploaded.` : 'No files were uploaded.', 'error');
     }
   } catch (error) {
-    $('#upload-progress').hidden = true;
+    $('#upload-scene').hidden = true;
     setMode('home');
     toast(error.message, 'error');
   } finally {
@@ -775,6 +828,8 @@ function newDrop() {
   $('#home-view').hidden = false;
   $('#ready-view').hidden = true;
   $('#active-view').hidden = true;
+  $('#upload-scene').hidden = true;
+  $('#upload-complete-view').hidden = true;
   $('#text-panel').hidden = true;
   $('#upload-progress').hidden = true;
   $('#ready-card').classList.remove('reveal');
@@ -789,6 +844,7 @@ function setupEvents() {
   const zone = $('#drop-zone');
   $('#choose-files').onclick = () => $('#file-input').click();
   $('#cancel-upload').onclick = cancelUpload;
+  $('#cancel-upload-scene').onclick = cancelUpload;
   $('#close-file-review').onclick = closeFileReview;
   $('#cancel-file-review').onclick = closeFileReview;
   $('#confirm-file-upload').onclick = confirmFileUpload;
