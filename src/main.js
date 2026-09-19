@@ -218,8 +218,9 @@ function renderShell() {
 }
 
 function updateExpiryHelp() {
-  const value = $('#expiry-select')?.value || '1d';
-  $('#expiry-help').textContent = `After ${EXPIRY_OPTIONS[value]}`;
+  const select = $('#expiry-select');
+  if (!select) return;
+  select.title = `Keep this Drop for ${EXPIRY_OPTIONS[select.value] || EXPIRY_OPTIONS['1d']}`;
 }
 
 async function createDrop(expiry = $('#expiry-select')?.value || '1d') {
