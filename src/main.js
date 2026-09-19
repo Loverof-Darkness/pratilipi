@@ -19,7 +19,8 @@ const state = {
   view: 'home',
   uploading: 0,
   batchId: 0,
-  publicShare: false
+  publicShare: false,
+  uploadController: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -112,6 +113,11 @@ function setBusy(delta) {
   state.uploading = Math.max(0, state.uploading + delta);
   document.body.classList.toggle('busy', state.uploading > 0);
 }
+function cancelUpload() {
+  if (!state.uploadController) return;
+  state.batchId += 1;
+  state.uploadController.abort();
+}
 
 function renderShell() {
   document.title = 'प्रतिलिपि — Pratilipi';
@@ -167,7 +173,7 @@ function renderShell() {
           </div>
 
           <div id="upload-progress" class="upload-progress" hidden>
-            <div class="progress-head"><strong>Sending your files</strong><span id="progress-total">0%</span></div>
+            <div class="progress-head"><strong>Sending your files</strong><div class="progress-head-actions"><span id="progress-total">0%</span><button id="cancel-upload" class="upload-cancel" type="button">Cancel</button></div></div>
             <div class="progress-track"><i id="progress-bar"></i></div>
             <div id="upload-queue" class="upload-queue"></div>
           </div>
@@ -288,7 +294,7 @@ function updateQueueItem(row, percent, label) {
   row.querySelector('small').textContent = label;
 }
 
-async function cloudinaryUpload(file, onProgress) {
+async function cloudinaryUpload(file, onProgress, signal) {
   const form = new FormData();
   form.append('file', file);
   form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -298,6 +304,7 @@ async function cloudinaryUpload(file, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', CLOUDINARY_UPLOAD_URL);
     xhr.responseType = 'json';
+    signal?.addEventListener('abort', () => xhr.abort(), { once: true });
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
     };
@@ -312,7 +319,7 @@ async function cloudinaryUpload(file, onProgress) {
   });
 }
 
-async function uploadOne(file, row, onProgress) {
+async function uploadOne(file, row, onProgress, signal) {
   try {
     await ensureDrop();
     updateQueueItem(row, 0, 'Uploading…');
@@ -339,6 +346,11 @@ async function uploadOne(file, row, onProgress) {
     row.classList.add('done');
     return done.file;
   } catch (error) {
+    if (error?.name === 'AbortError' || signal?.aborted) {
+      updateQueueItem(row, 0, 'Cancelled');
+      row.classList.add('cancelled');
+      return null;
+    }
     updateQueueItem(row, 0, error.message);
     row.classList.add('error');
     return null;
@@ -350,6 +362,8 @@ async function startUploadBatch(files) {
   if (!valid.length || state.uploading) return;
 
   const batch = ++state.batchId;
+  const controller = new AbortController();
+  state.uploadController = controller;
   setBusy(1);
   setMode('uploading');
   $('#upload-progress').hidden = false;
@@ -378,7 +392,7 @@ async function startUploadBatch(files) {
       const uploaded = await uploadOne(file, rows[index], (pct) => {
         uploadedBytes[index] = file.size * (pct / 100);
         updateOverallProgress();
-      });
+      }, controller.signal);
       if (uploaded) {
         uploadedBytes[index] = file.size;
         succeeded += 1;
@@ -393,6 +407,12 @@ async function startUploadBatch(files) {
       );
     }));
 
+    if (controller.signal.aborted) {
+      $('#upload-progress').hidden = true;
+      setMode('home');
+      toast(succeeded ? `Upload cancelled. ${succeeded} file(s) completed.` : 'Upload cancelled.');
+      return;
+    }
     if (batch !== state.batchId) return;
     await refreshDrop();
     $('#upload-progress').hidden = true;
@@ -408,6 +428,7 @@ async function startUploadBatch(files) {
     setMode('home');
     toast(error.message, 'error');
   } finally {
+    if (state.uploadController === controller) state.uploadController = null;
     setBusy(-1);
   }
 }
@@ -720,6 +741,7 @@ function newDrop() {
 function setupEvents() {
   const zone = $('#drop-zone');
   $('#choose-files').onclick = () => $('#file-input').click();
+  $('#cancel-upload').onclick = cancelUpload;
   $('#file-input').onchange = (event) => {
     const files = [...event.target.files];
     // Reset immediately so selecting the same file after a failed/cancelled upload
