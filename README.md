@@ -25,9 +25,9 @@ Expiry cleanup
 
 The production application is **Cloudflare Pages only**. GitHub Pages is not used because it cannot execute the `functions/` backend. Cloudflare Pages supports a root `functions/` directory for Pages Functions. urlhttps://developers.cloudflare.com/pages/functions/get-started/
 
-## Private startup authentication
+## Private dashboard authentication
 
-Pratilipi is configured as a private tool. The browser shows a startup login screen before the application can be used.
+Pratilipi keeps the public landing experience visible, but creation and management actions are protected. The **Access Dashboard** control opens the private login dialog. Shared `/u/<drop-token>` links remain public.
 
 Set these **Cloudflare Pages environment secrets**:
 
@@ -38,7 +38,7 @@ PRATILIPI_PASSKEY
 
 Use **Production** scope for the deployed site. Keep both values server-side; they are never embedded into the frontend build.
 
-Authentication uses a signed, HTTP-only, `Secure`, `SameSite=Strict` session cookie with a 7-day lifetime. The startup session protects the private dashboard and all upload/mutation APIs. Public Drop links and direct file/text downloads do not require the startup session, so anyone who has a shared link can view and download that Drop while expiry rules are still enforced. Logging out clears the session cookie. Changing the passkey invalidates previously issued sessions because the session signature key is derived from the configured credentials.
+Authentication uses a signed, HTTP-only, `Secure`, `SameSite=Strict` session cookie with a 7-day lifetime. The session protects the dashboard's upload and mutation APIs. Public Drop links and direct file/text downloads do not require the dashboard session, so anyone who has a shared link can view and download that Drop while expiry rules are still enforced. Logging out clears the session cookie. Changing the passkey invalidates previously issued sessions because the session signature key is derived from the configured credentials.
 
 Auth routes:
 
@@ -151,11 +151,10 @@ The Worker deletes recorded Cloudinary assets first and removes the correspondin
 
 The download Function:
 
-1. Requires the Pratilipi startup session.
-2. Looks up the file in D1.
-3. Verifies the Drop still exists and has not expired.
-4. Redirects to the matching Cloudinary delivery URL.
-5. Adds Cloudinary's `fl_attachment` delivery flag so images and videos download instead of being embedded inline.
+1. Looks up the file in D1.
+2. Verifies the Drop still exists and has not expired.
+3. Fetches the stored Cloudinary asset through Pratilipi.
+4. Returns it with `Content-Disposition: attachment` so direct links download the original file instead of becoming a dashboard redirect.
 
 Cloudinary documents `fl_attachment` as the delivery flag for attachment downloads. urlhttps://cloudinary.com/documentation/transformation_reference
 
@@ -198,7 +197,9 @@ There is one private Pratilipi access account configured through Cloudflare secr
 
 ## UI / interaction flow
 
-The current UI is a Wormhole-inspired Pratilipi experience with:
+The current UI follows the supplied Pratilipi reference dashboard: a dark cosmic canvas, purple/blue file sharing card, orange/red text card, centered OR separator, animated transfer panel, success/share action bar, and compact navigation. The implementation is real HTML/CSS/SVG rather than a screenshot image.
+
+The UI includes:
 
 - private startup login screen
 - animated cosmic/warp background
