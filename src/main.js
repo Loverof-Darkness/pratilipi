@@ -172,13 +172,16 @@ function renderShell() {
           </section>
         </div>
         <div class="home-random-note"><strong>✦ Random theme on every upload</strong><span>D4 feather or D9 dragon — your upload scene is selected automatically.</span></div>
+
+      </section
+
         <section id="upload-scene" class="upload-scene" hidden aria-live="polite">
           <div class="upload-scene-art"><span class="upload-decoration upload-decoration-a" aria-hidden="true"></span><span class="upload-decoration upload-decoration-b" aria-hidden="true"></span><div class="upload-logo" id="upload-logo" data-theme="d4"><span class="upload-logo-outline" aria-hidden="true">प्रतिलिपि</span><span class="upload-logo-fill" id="upload-logo-fill" aria-hidden="true">प्रतिलिपि</span></div><p class="upload-scene-label" id="upload-scene-label">Uploading your files…</p><strong class="upload-percent" id="upload-scene-percent">0%</strong><p class="upload-scene-sub" id="upload-scene-sub">Preparing your Pratilipi</p></div>
           <div class="upload-progress-track"><i id="upload-scene-bar"></i></div>
           <div class="upload-scene-meta"><span id="upload-scene-count">0 / 0 files</span><span id="upload-scene-bytes">0 B / 0 B</span><button id="cancel-upload-scene" class="upload-cancel" type="button">Cancel upload</button></div>
           <div id="upload-queue" class="upload-queue upload-scene-queue"></div>
         </section>
-      </section>
+>
 
       <section id="upload-complete-view" class="upload-complete-view" hidden>
         <div class="upload-complete-card">
@@ -208,7 +211,7 @@ function renderShell() {
       </section>
 
       <section id="active-view" class="active-view" hidden>
-        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active uploads</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
+        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active Shares</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
         <div id="active-list" class="active-grid"></div>
       </section>
 
