@@ -20,7 +20,8 @@ const state = {
   uploading: 0,
   batchId: 0,
   publicShare: false,
-  uploadController: null
+  uploadController: null,
+  pendingFiles: []
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -219,6 +220,7 @@ function renderShell() {
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <dialog id="file-review-dialog" class="qr-dialog file-review-dialog"><div class="dialog-inner"><button id="close-file-review" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">REVIEW FILES</p><h3>Ready to upload?</h3><p class="review-sub">Check what you are about to send. Nothing is uploaded until you confirm.</p><div id="file-review-list" class="file-review-list"></div><div class="dialog-actions"><button id="cancel-file-review" class="ready-btn" type="button">Cancel</button><button id="confirm-file-upload" class="cta small" type="button">Upload files</button></div></div></dialog>
     <dialog id="qr-dialog" class="qr-dialog"><div class="dialog-inner"><button id="close-qr" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">SCAN WITH PHONE</p><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly /><div class="dialog-actions"><button id="copy-qr-url" class="ready-btn" type="button">Copy URL</button><button id="close-qr-bottom" class="ready-btn" type="button">Done</button></div></div></dialog>
   `;
   updateExpiryHelp();
@@ -278,6 +280,31 @@ function setProgress(percent, activeLabel = '') {
   const pct = Math.max(0, Math.min(100, percent));
   $('#progress-bar').style.width = `${pct}%`;
   $('#progress-total').textContent = activeLabel || `${Math.round(pct)}%`;
+}
+
+function reviewFiles(files) {
+  const valid = files.filter((file) => file instanceof File && file.size >= 0);
+  if (!valid.length || state.uploading) return;
+  state.pendingFiles = valid;
+  const list = $('#file-review-list');
+  list.innerHTML = valid.map((file) => `
+    <article class="file-review-item">
+      <span class="queue-icon">${esc(iconFor(file.type))}</span>
+      <div class="file-review-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>${esc(file.type || 'Unknown type')} · ${formatBytes(file.size)}</small></div>
+    </article>`).join('');
+  $('#file-review-dialog').showModal();
+}
+
+function closeFileReview() {
+  state.pendingFiles = [];
+  if ($('#file-review-dialog')?.open) $('#file-review-dialog').close();
+}
+
+function confirmFileUpload() {
+  const files = state.pendingFiles.slice();
+  state.pendingFiles = [];
+  if ($('#file-review-dialog')?.open) $('#file-review-dialog').close();
+  startUploadBatch(files);
 }
 
 function addQueueItem(file) {
@@ -766,12 +793,15 @@ function setupEvents() {
   const zone = $('#drop-zone');
   $('#choose-files').onclick = () => $('#file-input').click();
   $('#cancel-upload').onclick = cancelUpload;
+  $('#close-file-review').onclick = closeFileReview;
+  $('#cancel-file-review').onclick = closeFileReview;
+  $('#confirm-file-upload').onclick = confirmFileUpload;
   $('#file-input').onchange = (event) => {
     const files = [...event.target.files];
     // Reset immediately so selecting the same file after a failed/cancelled upload
     // reliably emits another change event.
     event.target.value = '';
-    startUploadBatch(files);
+    reviewFiles(files);
   };
 
   ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
@@ -784,7 +814,7 @@ function setupEvents() {
     zone.classList.remove('dragover');
     if (!state.uploading) setMode('home');
   }));
-  zone.addEventListener('drop', (event) => startUploadBatch([...event.dataTransfer.files]));
+  zone.addEventListener('drop', (event) => reviewFiles([...event.dataTransfer.files]));
   zone.addEventListener('keydown', (event) => {
     if (event.target !== zone) return;
     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#file-input').click(); }
@@ -792,7 +822,7 @@ function setupEvents() {
 
   document.addEventListener('paste', (event) => {
     const files = [...(event.clipboardData?.items || [])].map((item) => item.kind === 'file' ? item.getAsFile() : null).filter(Boolean);
-    if (files.length) { event.preventDefault(); startUploadBatch(files); return; }
+    if (files.length) { event.preventDefault(); reviewFiles(files); return; }
     const text = event.clipboardData?.getData('text/plain');
     if (text && document.activeElement !== $('#text-input')) {
       toggleTextPanel(true);
@@ -812,7 +842,7 @@ function setupEvents() {
         const blob = await item.getType(type);
         if (blob) files.push(new File([blob], `clipboard-${Date.now()}.${type.split('/')[1] || 'png'}`, { type }));
       }
-      if (files.length) startUploadBatch(files);
+      if (files.length) reviewFiles(files);
       else toast('No files found in clipboard.', 'error');
     } catch {
       toast('Clipboard access was denied by the browser.', 'error');
