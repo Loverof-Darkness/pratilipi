@@ -14,5 +14,9 @@
   "devDependencies": {
     "vite": "^7.1.5",
     "wrangler": "^4.38.0"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "jszip": "^3.10.1"
   }
 }
