@@ -661,3 +661,18 @@ body{overflow-x:hidden;background:#01040b}
   }
   .site-scale .mode-grid{display:grid;grid-template-columns:1fr;gap:14px}
 }
+
+/* Final internal card geometry */
+.site-scale .file-card .visual-logo{height:140px}
+.site-scale .file-card .visual-logo svg{height:124px}
+.site-scale .file-card .visual-logo h3{bottom:-1px}
+.site-scale .file-card .drop-zone{margin-top:4px;margin-bottom:9px}
+.site-scale .file-card .file-type-row{padding-top:0;padding-bottom:7px}
+.site-scale .file-card .card-bottom-row{padding-top:5px;padding-bottom:8px}
+
+.site-scale .text-card .visual-logo{height:155px}
+.site-scale .text-card .visual-logo svg{height:136px}
+.site-scale .text-card textarea{margin-top:3px;min-height:128px}
+.site-scale .text-card .text-count{padding-top:3px;padding-bottom:7px}
+.site-scale .text-card .text-chip-row{padding-bottom:9px}
+.site-scale .text-card>.save-text-btn{margin-bottom:9px}
