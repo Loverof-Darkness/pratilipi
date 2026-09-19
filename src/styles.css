@@ -380,3 +380,284 @@ body{background:#01040b;letter-spacing:.01em}
   font-weight:800;
   transform:rotate(3deg);
 }
+
+
+/* =========================================================
+   REFERENCE COMPOSITION — 1536 × 1024
+   Desktop stage follows the supplied screenshot geometry.
+   ========================================================= */
+:root{--site-scale:min(1,calc(100vw / 1536px))}
+html,body,#app{min-height:0}
+body{overflow-x:hidden;background:#01040b}
+#app{position:relative;width:100%;height:calc(1024px * var(--site-scale));overflow:hidden}
+.site-scale{
+  position:absolute;
+  top:0;
+  left:50%;
+  width:1536px;
+  height:1024px;
+  transform:translateX(-50%) scale(var(--site-scale));
+  transform-origin:top center;
+}
+.site-scale .topbar{
+  position:absolute;
+  inset:0 auto auto 0;
+  width:1536px;
+  height:80px;
+  margin:0;
+  border-bottom:0;
+  display:block;
+  z-index:20;
+}
+.site-scale .page{
+  position:absolute;
+  top:80px;
+  left:0;
+  width:1536px;
+  height:944px;
+  margin:0;
+  padding:0;
+}
+.site-scale .home-page{
+  position:absolute;
+  inset:0;
+  width:1536px;
+  height:944px;
+  min-height:0;
+}
+.site-scale .view-page,.site-scale .public-view{position:absolute;inset:0}
+.site-scale .footer{display:none}
+
+/* Header */
+.site-scale .brand{
+  position:absolute;
+  left:130px;top:9px;
+  width:205px;height:63px;
+}
+.site-scale .brand-icon{width:49px;height:49px}
+.site-scale .brand-copy{position:absolute;left:58px;top:3px}
+.site-scale .brand-copy strong{font-size:30px}
+.site-scale .brand-copy small{font-size:11px;margin-top:6px}
+.site-scale .primary-nav{
+  position:absolute;
+  left:399px;top:0;
+  width:420px;height:80px;
+  display:flex;justify-content:flex-start;gap:0;
+}
+.site-scale .nav-link{
+  width:auto;min-width:112px;height:80px;padding:0 22px;font-size:15px;
+}
+.site-scale .nav-link:after{left:10px;right:10px;bottom:0;height:2px}
+.site-scale .top-right{
+  position:absolute;
+  left:945px;top:0;
+  width:455px;height:80px;
+  display:flex;justify-content:flex-start;gap:52px;
+}
+.site-scale .tagline{font-size:14px;line-height:80px}
+.site-scale .dashboard-btn{
+  margin-top:16px;
+  width:205px;height:46px;min-height:46px;
+}
+
+/* Hero strip */
+.site-scale .hero-heading{
+  position:absolute;
+  left:0;top:10px;
+  width:1536px;height:75px;
+  min-height:0;padding:0;
+  display:block;
+}
+.site-scale .hero-heading>div:first-child{
+  position:absolute;
+  left:535px;top:11px;
+  width:365px;padding:0;
+  text-align:center;
+}
+.site-scale .hero-heading h1{font-size:26px;line-height:1.18}
+.site-scale .hero-heading p{font-size:16px;margin-top:7px}
+.site-scale .random-banner{
+  position:absolute;
+  left:1046px;top:12px;
+  width:355px;height:61px;
+  min-height:61px;
+}
+.site-scale .script-badge{
+  position:absolute;
+  left:1435px;top:-10px;
+  width:76px;
+  margin:0;
+  font-size:25px;
+}
+
+/* Main two-card row */
+.site-scale .mode-grid{
+  position:absolute;
+  left:65px;top:86px;
+  width:1409px;height:417px;
+  display:grid;
+  grid-template-columns:657px 90px 662px;
+  gap:0;
+}
+.site-scale .mode-card{
+  width:100%;height:417px;min-height:0;border-radius:19px;
+}
+.site-scale .or-separator{
+  height:417px;
+}
+.site-scale .or-separator:before,.site-scale .or-separator:after{
+  height:42%;
+}
+.site-scale .or-separator span{font-size:20px}
+
+/* Card internals */
+.site-scale .card-title-row{padding:18px 22px 2px;gap:12px}
+.site-scale .step-dot{width:32px;height:32px}
+.site-scale .card-title-row h2{font-size:18px}
+.site-scale .card-title-row p{font-size:12px}
+
+.site-scale .visual-logo{
+  height:178px;
+  padding:0 19px;
+}
+.site-scale .visual-logo svg{height:160px}
+.site-scale .visual-logo h3{font-size:16px;bottom:-1px}
+
+.site-scale .drop-zone{
+  margin:2px 49px 14px;
+  min-height:143px;
+}
+.site-scale .drop-zone strong{font-size:17px}
+.site-scale .drop-zone>span{font-size:12px}
+.site-scale .choose-btn{min-width:230px;padding:10px 32px}
+
+.site-scale .file-type-row{gap:21px;padding:1px 20px 13px}
+.site-scale .type-pill{min-width:52px;font-size:20px}
+.site-scale .type-pill small{font-size:8px}
+.site-scale .card-bottom-row{padding:8px 20px 15px}
+
+.site-scale .text-card textarea{
+  margin:3px 42px 0;
+  width:calc(100% - 84px);
+  min-height:130px;
+}
+.site-scale .text-count{font-size:11px}
+.site-scale .text-chip-row{padding:0 24px 12px}
+.site-scale .text-chip{min-width:96px}
+.site-scale .text-card>.save-text-btn{min-width:150px;margin-bottom:14px}
+
+/* Upload status section */
+.site-scale .upload-status-panel{
+  position:absolute;
+  left:55px;top:518px;
+  width:1427px;height:221px;min-height:221px;
+  margin:0;
+  padding:0;
+  grid-template-columns:395px 1fr 305px;
+  gap:0;
+}
+.site-scale .status-steps{
+  padding:29px 0 0 31px;
+  gap:22px;
+}
+.site-scale .status-step{font-size:15px}
+.site-scale .status-step .ring{width:29px;height:29px}
+.site-scale .status-main{
+  align-items:center;
+}
+.site-scale .status-art{
+  width:100%;
+  padding-top:8px;
+}
+.site-scale .upload-mark{
+  font-size:69px;
+  min-width:350px;
+}
+.site-scale .status-art p{font-size:15px;margin-top:1px}
+.site-scale .progress-track{
+  height:23px;
+  width:740px;
+  margin:13px auto 0;
+}
+.site-scale .progress-value{font-size:20px;margin-top:5px}
+.site-scale .status-side{
+  padding:27px 25px 20px 5px;
+  gap:17px;
+}
+.site-scale .status-metric{font-size:15px}
+.site-scale .status-metric strong{font-size:15px}
+.site-scale .cancel-btn{height:49px;padding:12px 14px;font-size:14px}
+.site-scale .upload-queue{
+  position:absolute;
+  left:395px;right:305px;bottom:0;
+  max-height:54px;
+  overflow:hidden;
+}
+
+/* Success strip */
+.site-scale .success-panel{
+  position:absolute;
+  left:55px;top:752px;
+  width:1427px;height:107px;min-height:107px;
+  margin:0;
+  padding:0 30px;
+  display:flex;align-items:center;
+}
+.site-scale .success-left{gap:19px}
+.site-scale .success-check{width:61px;height:61px}
+.site-scale .success-left h3{font-size:19px}
+.site-scale .success-left p{font-size:13px}
+.site-scale .success-actions{gap:14px}
+.site-scale .success-btn{
+  min-width:160px;height:48px;
+  padding:12px 17px;
+  font-size:13px;
+}
+.site-scale .success-btn.primary{min-width:160px}
+
+/* Footer */
+.site-scale .home-footer-note{
+  position:absolute;
+  left:44px;top:880px;
+  width:1448px;height:54px;
+  padding:0;
+  display:grid;
+  grid-template-columns:300px 1fr 300px;
+  align-items:center;
+  gap:25px;
+}
+.site-scale .home-footer-note:before{top:0}
+.site-scale .home-footer-note span{font-size:25px}
+.site-scale .home-footer-note b{font-size:10px;letter-spacing:.38em}
+.site-scale .home-footer-note strong{font-size:13px}
+
+/* Dialogs still use normal fixed viewport sizing */
+.site-scale~dialog,.site-scale~.toast{transform:none}
+
+/* Desktop artwork refinement */
+.site-scale .file-logo svg,.site-scale .text-logo svg{filter:drop-shadow(0 0 15px rgba(153,91,255,.26))}
+.site-scale .file-logo:before{width:330px;height:188px;top:-2px}
+.site-scale .text-logo:before{width:340px;height:188px;top:2px}
+.site-scale .file-logo:after,.site-scale .text-logo:after{opacity:.7}
+
+/* Make the lower showcase panels visually present without blocking interaction */
+@media(min-width:901px){
+  .site-scale .upload-status-panel{display:grid}
+}
+@media(max-width:900px){
+  #app{height:auto;min-height:100vh;overflow:visible}
+  .site-scale{
+    position:relative;
+    left:auto;top:auto;
+    width:100%;height:auto;
+    transform:none;
+  }
+  .site-scale .topbar,.site-scale .page{
+    position:relative;inset:auto;width:100%;height:auto;
+  }
+  .site-scale .home-page{position:relative;inset:auto;width:100%;height:auto;min-height:0}
+  .site-scale .hero-heading,.site-scale .mode-grid,.site-scale .upload-status-panel,.site-scale .success-panel,.site-scale .home-footer-note{
+    position:relative;left:auto;top:auto;width:auto;height:auto;
+  }
+  .site-scale .mode-grid{display:grid;grid-template-columns:1fr;gap:14px}
+}
