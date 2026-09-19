@@ -319,14 +319,20 @@ async function cloudinaryUpload(file, onProgress, signal) {
   });
 }
 
-async function uploadOne(file, row, onProgress, signal) {
+async function uploadOne(file, row, onProgress, signal, uploadedAssets) {
   try {
     await ensureDrop();
     updateQueueItem(row, 0, 'Uploading…');
     const uploaded = await cloudinaryUpload(file, (pct) => {
       updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`);
       onProgress?.(pct);
-    });
+    }, signal);
+    if (uploaded?.public_id) {
+      uploadedAssets.push({
+        publicId: uploaded.public_id,
+        resourceType: uploaded.resource_type || 'raw'
+      });
+    }
     updateQueueItem(row, 100, 'Registering…');
     const done = await api(`/api/drop/${state.dropId}/complete`, {
       method: 'POST',
@@ -379,6 +385,7 @@ async function startUploadBatch(files) {
     let succeeded = 0;
     const totalBytes = valid.reduce((sum, file) => sum + file.size, 0);
     const uploadedBytes = new Array(valid.length).fill(0);
+    const uploadedAssets = [];
 
     const updateOverallProgress = () => {
       const bytes = uploadedBytes.reduce((sum, value) => sum + value, 0);
@@ -392,7 +399,7 @@ async function startUploadBatch(files) {
       const uploaded = await uploadOne(file, rows[index], (pct) => {
         uploadedBytes[index] = file.size * (pct / 100);
         updateOverallProgress();
-      }, controller.signal);
+      }, controller.signal, uploadedAssets);
       if (uploaded) {
         uploadedBytes[index] = file.size;
         succeeded += 1;
@@ -408,6 +415,17 @@ async function startUploadBatch(files) {
     }));
 
     if (controller.signal.aborted) {
+      try {
+        if (state.dropId && uploadedAssets.length) {
+          await api(`/api/drop/${state.dropId}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ assets: uploadedAssets })
+          });
+        }
+      } catch (cleanupError) {
+        console.error('Cancelled upload cleanup failed', cleanupError);
+        toast('Upload cancelled, but some temporary files could not be cleaned up.', 'error');
+      }
       $('#upload-progress').hidden = true;
       setMode('home');
       toast(succeeded ? `Upload cancelled. ${succeeded} file(s) completed.` : 'Upload cancelled.');
