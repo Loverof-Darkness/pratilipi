@@ -1,7 +1,7 @@
 # Pratilipi Upload Experience — Scope / Plan
 
 ## Status
-PLANNED — awaiting approval before implementation.
+APPROVED — implementation started.
 
 ## Goal
 Create one consistent, polished upload journey for file selection, drag-and-drop, and copy/paste.
@@ -86,12 +86,15 @@ Primary concept: Living Pratilipi
 - Most directly communicates empty → filling.
 
 ## Recommended implementation
-Use D as the base mechanism, with subtle elements from A/C:
-- outline-first logo
-- real progress fill clipped inside the glyphs
-- restrained wormhole rings/particles
-- no fake percentage animation
-- CSS/SVG where possible for smooth performance
+Use the approved D4 + D9 visual directions. D4 is the file/feather theme; D9 is the text/dragon theme. For each file-upload batch, randomly select D4 or D9 for the dedicated upload-progress scene.
+- D4 feather/cosmic file styling and D9 dragon/flame text styling are both present in the main experience
+- upload scene randomly selects D4 or D9 per upload instance
+- outline-first प्रतिलिपि logo
+- the same colour gradient is visible in the outline treatment and the inner logo fill
+- inner logo fill is clipped from 0–100% using real aggregate uploaded bytes
+- restrained particles/rings and theme-specific decorative motion
+- no fake upload percentage animation
+- CSS/SVG-style layers where possible for smooth performance
 
 ## Acceptance criteria
 - No upload begins before the explicit Upload button.
