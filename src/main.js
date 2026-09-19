@@ -121,7 +121,7 @@ function setBusy(delta) {
 
 function renderShell() {
   document.title = 'प्रतिलिपि — Your Files, Your Way';
-  document.querySelector('#app').innerHTML = \`
+  document.querySelector('#app').innerHTML = `
     <div class="app-bg" aria-hidden="true">
       <div class="nebula nebula-a"></div><div class="nebula nebula-b"></div>
       <div class="stars stars-a"></div><div class="stars stars-b"></div>
@@ -212,8 +212,8 @@ function renderShell() {
     <dialog class="modal" id="review-dialog"><div class="modal-inner"><button class="modal-close" data-close="review-dialog" type="button">×</button><div class="modal-kicker">REVIEW BEFORE UPLOAD</div><h3>Ready to upload?</h3><p>Nothing is sent until you press Upload Files.</p><div id="review-list" class="review-list"></div><div class="modal-actions"><button class="secondary-btn" data-close="review-dialog" type="button">Cancel</button><button class="save-text-btn" id="confirm-upload" type="button">Upload Files</button></div></div></dialog>
     <dialog class="modal" id="files-dialog"><div class="modal-inner"><button class="modal-close" data-close="files-dialog" type="button">×</button><div class="modal-kicker">YOUR PRATILIPI</div><h3>Files in this Drop</h3><div id="files-list" class="modal-files-list"></div></div></dialog>
     <dialog class="modal qr-modal" id="qr-dialog"><div class="modal-inner"><button class="modal-close" data-close="qr-dialog" type="button">×</button><div class="modal-kicker">SCAN WITH PHONE</div><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly><div class="modal-actions"><button class="secondary-btn" id="copy-qr-url" type="button">Copy URL</button><button class="save-text-btn" data-close="qr-dialog" type="button">Done</button></div></div></dialog>
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  \`;
+    <div id="toast" class="toast" role="status" aria-live="polite"></div> 
+  `;
   updateExpiryHelp();
 }
 
