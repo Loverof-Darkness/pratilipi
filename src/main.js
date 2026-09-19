@@ -555,11 +555,16 @@ function renderReadyFiles() {
 }
 
 async function renderReadyState() {
-  $('#success-panel').hidden = false;
+  if (!state.files.length && !state.texts.length) return;
+  state.view = 'ready';
+  setMode('ready');
   $('#home-page').hidden = false;
   $('#active-view').hidden = true;
-  if (state.uploadUrl) $('#result-link').value = state.uploadUrl;
+  $('#public-view').hidden = true;
+  $('#success-panel').hidden = false;
+  $('#result-link').value = state.uploadUrl || `${PUBLIC_ORIGIN}/u/${state.dropId}`;
   renderReadyFiles();
+  $('#success-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function renderTextList() {
