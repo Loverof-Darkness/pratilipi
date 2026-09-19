@@ -777,6 +777,7 @@ function showView(view) {
   const active = view === 'active';
   const ready = view === 'ready';
   $('#home-view').hidden = active || ready;
+  $('#upload-scene').hidden = true;
   $('#ready-view').hidden = !ready;
   $('#active-view').hidden = !active;
   $('#nav-active').classList.toggle('active', active);
