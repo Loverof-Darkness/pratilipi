@@ -696,7 +696,10 @@ async function renderRecent() {
     list.innerHTML = '<div class="recent-empty">No recent Drops yet. Select a file to create your first one.</div>';
     return;
   }
-  list.innerHTML = records.map((item) => `<article class="recent-card"><div class="recent-main"><span>DROP</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</small></div><div class="recent-actions"><button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button></div></article>`).join('');
+  list.innerHTML = records.map((item) => {
+    const stillUploading = state.uploading > 0 && item.id === state.dropId;
+    return `<article class="recent-card ${stillUploading ? 'is-uploading' : ''}"><div class="recent-main"><span>${stillUploading ? 'UPLOADING' : 'DROP'}</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${stillUploading ? 'Still being uploaded…' : `${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}`}</small></div><div class="recent-actions">${stillUploading ? '<span class="uploading-note">Please wait…</span>' : `<button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button>`}</div></article>`;
+  }).join('');
   $$('[data-open-recent]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openRecent); });
   $$('[data-delete-recent]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteRecent, false); });
 }
@@ -710,7 +713,10 @@ async function renderActive() {
     list.innerHTML = '<div class="empty-state large">No active uploads on this browser yet.</div>';
     return;
   }
-  list.innerHTML = records.map((item) => `<article class="active-card"><div class="active-main"><span class="recent-label">ACTIVE DROP</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button></div></article>`).join('');
+  list.innerHTML = records.map((item) => {
+    const stillUploading = state.uploading > 0 && item.id === state.dropId;
+    return `<article class="active-card ${stillUploading ? 'is-uploading' : ''}"><div class="active-main"><span class="recent-label">${stillUploading ? 'UPLOADING' : 'ACTIVE DROP'}</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${stillUploading ? 'Still being uploaded…' : `${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}`}</p><small>${stillUploading ? 'Download / view will be available after upload completes.' : esc(item.uploadUrl)}</small></div><div class="active-actions">${stillUploading ? '<span class="uploading-note">Please wait…</span>' : `<button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button>`}</div></article>`;
+  }).join('');
   $$('[data-open-active]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openActive); });
   $$('[data-copy-active]').forEach((button) => { button.onclick = () => copyText(button.dataset.copyActive); });
   $$('[data-delete-active]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteActive, false); });
