@@ -130,6 +130,7 @@ function renderShell() {
       <svg class="leaf-frame leaf-right" viewBox="0 0 280 720"><defs><linearGradient id="lg2" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#244fff"/><stop offset=".52" stop-color="#7540ff"/><stop offset="1" stop-color="#ef48cf"/></linearGradient></defs><path d="M275 714C249 558 286 414 216 281C181 216 147 172 73 120" fill="none" stroke="url(#lg2)" stroke-width="5"/><g fill="url(#lg2)"><path d="M235 564C292 535 306 482 294 436C252 447 218 489 235 564Z"/><path d="M224 474C271 445 275 404 257 366C221 383 209 422 224 474Z"/><path d="M207 384C245 360 248 325 232 293C200 307 190 344 207 384Z"/><path d="M185 301C216 280 219 246 201 217C175 234 168 266 185 301Z"/></g></svg>
     </div>
 
+    <div class="site-scale">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Pratilipi home">
         <span class="brand-icon"><svg viewBox="0 0 64 64"><defs><linearGradient id="brandGrad" x1="0" x2="1"><stop stop-color="#ff4fe6"/><stop offset=".55" stop-color="#9b67ff"/><stop offset="1" stop-color="#52e4ff"/></linearGradient></defs><path d="M16 6h23l13 13v38H16z" fill="none" stroke="url(#brandGrad)" stroke-width="4" stroke-linejoin="round"/><path d="M39 6v14h13M24 30h17M24 38h14M24 46h11" fill="none" stroke="url(#brandGrad)" stroke-width="3" stroke-linecap="round"/></svg></span>
@@ -260,6 +261,7 @@ function renderShell() {
 
       <footer class="footer"><span>प्रतिलिपि • Temporary sharing, beautifully done.</span><div><button id="footer-active" type="button">Active Shares</button><button id="footer-new" type="button">Home</button></div></footer>
     </main>
+    </div>
 
     <dialog class="modal" id="auth-dialog"><div class="modal-inner auth-inner"><button class="modal-close" data-close="auth-dialog" type="button">×</button><div class="modal-icon">▣</div><div class="modal-kicker">SECURE DASHBOARD ACCESS</div><h3>Unlock Pratilipi</h3><p>Enter your private Access ID and passkey to create and manage Drops.</p><form id="auth-form"><label>Access ID<input id="auth-id" autocomplete="username" required></label><label>Passkey<div class="pass-wrap"><input id="auth-pass" type="password" autocomplete="current-password" required><button type="button" id="toggle-pass">Show</button></div></label><div class="auth-error" id="auth-error"></div><button class="save-text-btn" id="auth-submit" type="submit">Access Dashboard</button></form></div></dialog>
     <dialog class="modal" id="about-dialog"><div class="modal-inner"><button class="modal-close" data-close="about-dialog" type="button">×</button><div class="modal-kicker">ABOUT PRATILIPI</div><h3>More Than Files. It's Your Story.</h3><p>Pratilipi is a private, temporary sharing space for files and text with direct public share links. Drops expire automatically.</p><div class="about-grid"><span>Temporary Drops</span><span>Direct Downloads</span><span>QR Sharing</span><span>Public Share Links</span></div></div></dialog>
