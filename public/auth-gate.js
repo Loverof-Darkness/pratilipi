@@ -9,7 +9,7 @@
       </div>
       <p class="pr-auth-kicker">SECURE STARTUP</p>
       <h1 id="pr-auth-title" class="pr-auth-title">Unlock Pratilipi.</h1>
-      <p class="pr-auth-sub">This private instance requires your access ID and passkey before any upload, Drop, or download can be used.</p>
+      <p class="pr-auth-sub">This private instance requires your access ID and passkey before you can create or manage Drops.</p>
       <form class="pr-auth-form" id="pr-auth-form" autocomplete="on">
         <div class="pr-auth-field">
           <label for="pr-auth-id">Access ID</label>
@@ -55,7 +55,7 @@
   }
 
   async function bootstrap() {
-    if (/^\/u\/[^/]+\/?$/.test(location.pathname)) return;
+    if (/^\/u\/[^/]+\/?$/.test(location.pathname) || /^\/d(?:\/text)?\/[^/]+\/?$/.test(location.pathname)) return;
     document.documentElement.classList.add('auth-locked');
     document.body.classList.add('auth-locked');
     document.body.prepend(gate);
