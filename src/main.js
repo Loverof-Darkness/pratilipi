@@ -799,7 +799,6 @@ function newDrop() {
   $('#upload-scene').hidden = true;
   $('#upload-complete-view').hidden = true;
   $('#text-panel').hidden = false;
-  $('#upload-progress').hidden = true;
   $('#ready-card').classList.remove('reveal');
   $('#file-input').value = '';
   setMode('home');
