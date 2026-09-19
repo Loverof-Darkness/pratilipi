@@ -359,8 +359,10 @@ async function startUploadBatch(files) {
   try {
     await ensureDrop();
     let completed = 0;
+    let succeeded = 0;
     await Promise.all(valid.map(async (file, index) => {
-      await uploadOne(file, rows[index]);
+      const uploaded = await uploadOne(file, rows[index]);
+      if (uploaded) succeeded += 1;
       completed += 1;
       setProgress((completed / valid.length) * 100, `${completed} / ${valid.length}`);
     }));
@@ -370,7 +372,7 @@ async function startUploadBatch(files) {
     $('#upload-progress').hidden = true;
     if (state.files.length + state.texts.length) {
       await renderReadyState();
-      toast(completed === valid.length ? 'Drop ready to share.' : 'Some files could not be uploaded.', completed === valid.length ? 'normal' : 'error');
+      toast(succeeded === valid.length ? 'Drop ready to share.' : `${succeeded} of ${valid.length} files uploaded.`, succeeded === valid.length ? 'normal' : 'error');
     } else {
       setMode('home');
       toast('No files were uploaded.', 'error');
@@ -437,17 +439,21 @@ function renderReadyFiles() {
 
 async function renderReadyState() {
   if (!state.files.length && !state.texts.length) return;
+  state.view = 'ready';
   setMode('ready');
   $('#home-view').hidden = true;
   $('#active-view').hidden = true;
   $('#ready-view').hidden = false;
-  const mainLink = state.files[0] ? fileUrl(state.files[0]) : textUrl(state.texts[0]);
+  // A Drop link shows every item and remains useful when files are added or removed.
+  // Individual download links are still available in the preview list below.
+  const mainLink = state.uploadUrl || `${PUBLIC_ORIGIN}/u/${state.dropId}`;
   $('#result-link').value = mainLink;
   const expiryLabel = EXPIRY_OPTIONS[state.expiry] || state.expiry;
   $('#ready-expiry-label').textContent = `Expires in ${expiryLabel.toLowerCase()}`;
   $('#ready-expiry-time').textContent = state.expiresAt ? new Date(state.expiresAt).toLocaleString() : 'Auto-delete is enabled';
-  $('#ready-card').classList.remove('reveal');
-  requestAnimationFrame(() => $('#ready-card').classList.add('reveal'));
+  if (!$('#ready-card').classList.contains('reveal')) {
+    requestAnimationFrame(() => $('#ready-card').classList.add('reveal'));
+  }
   renderReadyFiles();
   renderTextList();
 }
@@ -667,6 +673,7 @@ function newDrop() {
   state.expiry = '1d';
   state.files = [];
   state.texts = [];
+  state.view = 'home';
   if ($('#expiry-select')) {
     $('#expiry-select').disabled = false;
     $('#expiry-select').value = '1d';
@@ -676,6 +683,7 @@ function newDrop() {
   $('#active-view').hidden = true;
   $('#text-panel').hidden = true;
   $('#upload-progress').hidden = true;
+  $('#ready-card').classList.remove('reveal');
   $('#file-input').value = '';
   setMode('home');
   updateExpiryHelp();
@@ -686,7 +694,13 @@ function newDrop() {
 function setupEvents() {
   const zone = $('#drop-zone');
   $('#choose-files').onclick = () => $('#file-input').click();
-  $('#file-input').onchange = (event) => startUploadBatch([...event.target.files]);
+  $('#file-input').onchange = (event) => {
+    const files = [...event.target.files];
+    // Reset immediately so selecting the same file after a failed/cancelled upload
+    // reliably emits another change event.
+    event.target.value = '';
+    startUploadBatch(files);
+  };
 
   ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
     event.preventDefault();
