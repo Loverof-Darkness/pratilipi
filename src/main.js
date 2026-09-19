@@ -187,10 +187,6 @@ function renderShell() {
           <div id="text-list" class="mini-results"></div>
         </section>
 
-        <section class="recent-section">
-          <div class="section-heading"><div><p class="eyebrow">ON THIS DEVICE</p><h2>Recent drops</h2></div><button id="open-active" class="text-button" type="button">View all →</button></div>
-          <div id="recent-list" class="recent-grid"></div>
-        </section>
       </section>
 
       <section id="ready-view" class="ready-view" hidden>
