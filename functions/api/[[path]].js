@@ -132,6 +132,24 @@ export async function onRequest({ request, env, params }) {
       } }), request);
     }
 
+    if (path.length === 3 && path[2] === 'cancel' && method === 'POST') {
+      const input = await body();
+      const assets = Array.isArray(input.assets) ? input.assets.slice(0, 100) : [];
+      let deleted = 0;
+      for (const asset of assets) {
+        const publicId = String(asset?.publicId || '').slice(0, 500);
+        const resourceType = ['image', 'video', 'raw'].includes(asset?.resourceType) ? asset.resourceType : 'raw';
+        if (!publicId) continue;
+        try {
+          await destroyCloudinaryAsset(env, { publicId, resourceType, invalidate: true });
+          deleted += 1;
+        } catch (cause) {
+          console.error('Cancelled upload cleanup failed', dropId, publicId, cause);
+        }
+      }
+      return response(json({ ok: true, deletedAssets: deleted }), request);
+    }
+
     if (path.length === 3 && path[2] === 'text' && method === 'POST') {
       const input = await body();
       const content = String(input.content ?? '');
