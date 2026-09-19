@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import JSZip from 'jszip';
 import './styles.css';
 
 const API_BASE = location.origin.replace(/\/$/, '');
@@ -23,7 +24,8 @@ const state = {
   uploadController: null,
   uploadAssets: [],
   authenticated: false,
-  authConfigured: true
+  authConfigured: true,
+  pendingFiles: []
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -508,24 +510,22 @@ function renderTextList() {
 }
 
 async function saveText() {
+  if (!(await requireDashboardAccess())) return;
   const content = $('#text-input').value;
   if (!content.trim()) return toast('Paste some text first.', 'error');
-  setBusy(1);
-  setMode('uploading');
   try {
     await ensureDrop();
-    await api(`/api/drop/${state.dropId}/text`, { method: 'POST', body: JSON.stringify({ content }) });
+    await api('/api/drop/' + state.dropId + '/text', { method: 'POST', body: JSON.stringify({ content }) });
     $('#text-input').value = '';
     updateTextCount();
     await refreshDrop();
-    $('#text-panel').hidden = false;
-    await renderReadyState();
+    $('#success-panel').hidden = false;
+    $('#result-link').value = state.uploadUrl || (PUBLIC_ORIGIN + '/u/' + state.dropId);
+    renderReadyFiles();
+    $('#success-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
     toast('Text saved and ready to share.');
   } catch (error) {
-    setMode('home');
     toast(error.message, 'error');
-  } finally {
-    setBusy(-1);
   }
 }
 
@@ -688,8 +688,15 @@ async function renderActive() {
 
 function showView(view) {
   state.view = view;
-  $('#home-page').hidden = view === 'active';
-  $('#active-view').hidden = view !== 'active';
+  if (view === 'active') {
+    $('#home-page').hidden = true;
+    $('#active-view').hidden = false;
+    $('#success-panel').hidden = true;
+  } else {
+    $('#home-page').hidden = false;
+    $('#active-view').hidden = true;
+    if (view === 'home') $('#success-panel').hidden = true;
+  }
   $('#nav-home').classList.toggle('active', view !== 'active');
   $('#nav-active').classList.toggle('active', view === 'active');
   if (view === 'active') renderActive();
@@ -795,6 +802,31 @@ async function downloadZip() {
   } catch (error) {
     toast(error.message, 'error');
   }
+}
+
+
+function openReview(files) {
+  state.pendingFiles = files.filter((file) => file instanceof File && file.size >= 0);
+  if (!state.pendingFiles.length) return;
+  $('#review-list').innerHTML = state.pendingFiles.map((file) =>
+    '<article class="review-file"><span class="review-icon">' + esc(file.type || 'FILE') + '</span><div><strong>' +
+    esc(file.name) + '</strong><small>' + esc(file.type || 'Unknown type') + ' · ' + formatBytes(file.size) +
+    '</small></div></article>'
+  ).join('');
+  openModal('review-dialog');
+}
+
+async function startUpload(files) {
+  if (!(await requireDashboardAccess())) return;
+  openReview(files);
+}
+
+async function confirmUpload() {
+  const files = state.pendingFiles.slice();
+  state.pendingFiles = [];
+  closeModal('review-dialog');
+  if (!files.length) return;
+  await startUploadBatch(files);
 }
 
 function setupEvents() {
