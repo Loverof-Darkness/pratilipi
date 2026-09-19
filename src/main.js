@@ -804,7 +804,7 @@ async function renderActive() {
     list.innerHTML = '<div class="empty-state large">No active uploads on this browser yet.</div>';
     return;
   }
-  list.innerHTML = records.map((item) => `<article class="active-card"><div class="active-main"><span class="recent-label">ACTIVE DROP</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button></div></article>`).join('');
+  list.innerHTML = records.map((item) => `<article class="active-card"><div class="active-main"><span class="mini-kicker">ACTIVE SHARE</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="secondary-btn" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="secondary-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="danger-btn" type="button">Delete all</button></div></article>`).join('');
   $$('[data-open-active]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openActive); });
   $$('[data-copy-active]').forEach((button) => { button.onclick = () => copyText(button.dataset.copyActive); });
   $$('[data-delete-active]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteActive, false); });
@@ -1056,7 +1056,7 @@ async function openDrop(dropId) {
 
 function startClock() {
   setInterval(() => {
-    if (state.expiresAt && state.view === 'ready') {
+    if (state.expiresAt && state.view === 'ready' && $('#ready-expiry-time')) {
       $('#ready-expiry-time').textContent = `Expires ${new Date(state.expiresAt).toLocaleString()} · ${formatRemaining(state.expiresAt)}`;
     }
     if (state.view === 'home') renderRecent();
