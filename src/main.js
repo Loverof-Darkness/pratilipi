@@ -469,22 +469,34 @@ function textUrl(text) {
 }
 
 function renderReadyFiles() {
-  const list = $('#ready-files');
-  if (!list) return;
-  const entries = [
-    ...state.files.map((file) => ({ kind: 'file', id: file.id, name: file.name, type: file.content_type || '', meta: `${formatBytes(Number(file.size))} · ${file.content_type || file.format || 'file'}`, url: fileUrl(file), preview: file.content_type?.startsWith('image/') ? file.secure_url : '' })),
-    ...state.texts.map((text) => ({ kind: 'text', id: text.id, name: text.content.slice(0, 70) || 'Text', meta: `${text.content.length.toLocaleString()} characters`, url: textUrl(text) }))
+  const items = [
+    ...state.files.map((file) => ({
+      kind: 'file',
+      id: file.id,
+      name: file.name,
+      meta: formatBytes(Number(file.size)) + ' · ' + (file.content_type || file.format || 'file'),
+      url: fileUrl(file)
+    })),
+    ...state.texts.map((text) => ({
+      kind: 'text',
+      id: text.id,
+      name: (text.content || 'Text').slice(0, 100),
+      meta: text.content.length.toLocaleString() + ' characters',
+      url: textUrl(text)
+    }))
   ];
-  list.innerHTML = entries.length ? entries.map((item) => `
-    <article class="ready-file">
-      <div class="ready-file-icon">${item.preview ? `<img src="${esc(item.preview)}" alt="" />` : `<span>${esc(item.kind === 'text' ? 'TXT' : iconFor(item.type))}</span>`}</div>
-      <div class="ready-file-main"><strong title="${esc(item.name)}">${esc(item.name)}</strong><small>${esc(item.meta)}</small><input readonly value="${esc(item.url)}" /></div>
-      <div class="ready-file-actions"><button data-copy="${esc(item.url)}" type="button">Copy</button><button data-qr="${esc(item.url)}" data-qr-title="${esc(item.name)}" type="button">QR</button><a href="${esc(item.url)}">Open</a>${item.kind === 'file' ? `<button data-delete-file="${esc(item.id)}" type="button">Delete</button>` : `<button data-delete-text="${esc(item.id)}" type="button">Delete</button>`}</div>
-    </article>`).join('') : '<div class="empty-state">No uploaded items in this Drop.</div>';
-  if (state.publicShare) {
-    list.querySelectorAll('[data-delete-file], [data-delete-text]').forEach((button) => { button.hidden = true; });
-  }
-  bindDynamicActions();
+  const html = items.length ? items.map((item) =>
+    '<article class="ready-file-row"><span>' + esc(item.kind === 'text' ? 'TXT' : fileIcon('')) +
+    '</span><div><strong>' + esc(item.name) + '</strong><small>' + esc(item.meta) +
+    '</small></div><button data-ready-copy="' + esc(item.url) + '" type="button">Copy</button><a href="' +
+    esc(item.url) + '">Open</a></article>'
+  ).join('') : '<div class="empty-state">No uploaded items in this Drop.</div>';
+
+  if ($('#ready-files')) $('#ready-files').innerHTML = html;
+  if ($('#files-list')) $('#files-list').innerHTML = html;
+  $('[data-ready-copy]').forEach((button) => {
+    button.onclick = () => copyText(button.dataset.readyCopy);
+  });
 }
 
 async function renderReadyState() {
@@ -579,6 +591,7 @@ async function showQr(url, title = 'Pratilipi QR') {
 }
 
 async function deleteFile(fileId) {
+  if (!(await requireDashboardAccess())) return;
   if (!window.confirm('Delete this file permanently?')) return;
   try {
     await api(`/api/drop/${encodeURIComponent(state.dropId)}/file/${encodeURIComponent(fileId)}`, { method: 'DELETE' });
@@ -591,6 +604,7 @@ async function deleteFile(fileId) {
 }
 
 async function deleteText(textId) {
+  if (!(await requireDashboardAccess())) return;
   if (!window.confirm('Delete this saved text permanently?')) return;
   try {
     await api(`/api/drop/${encodeURIComponent(state.dropId)}/text/${encodeURIComponent(textId)}`, { method: 'DELETE' });
@@ -612,7 +626,7 @@ async function afterContentMutation() {
 }
 
 async function deleteEntireDrop(dropId, goHome = true) {
-  if (!dropId) return;
+  if (!dropId || !(await requireDashboardAccess())) return;
   if (!window.confirm('Delete this entire Drop? All uploaded files and saved text will be permanently deleted. This cannot be undone.')) return;
   try {
     await api(`/api/drop/${encodeURIComponent(dropId)}`, { method: 'DELETE' });
