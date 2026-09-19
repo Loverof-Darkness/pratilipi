@@ -199,7 +199,16 @@ function renderShell() {
         <section class="home-footer-note"><span>Simple Sharing. Beautifully Done.</span><i></i><b>— MORE THAN FILES — IT'S YOUR STORY —</b><i></i><strong>Built for You ♥</strong></section>
       </section>
 
-      <section class="view-page" id="active-view" hidden>
+      <section class="public-view" id="public-view" hidden>
+  <div class="public-head">
+    <div><div class="mini-kicker">PUBLIC SHARE</div><h2>Your Pratilipi</h2><p>Anyone with this link can view and download these items.</p></div>
+    <button class="secondary-btn" id="public-copy-link" type="button">Copy Share Link</button>
+  </div>
+  <div class="public-link" id="public-link"></div>
+  <div class="public-items" id="public-items"></div>
+</section>
+
+<section class="view-page" id="active-view" hidden>
         <div class="page-head"><div><div class="mini-kicker">YOUR LOCAL HISTORY</div><h2>Active Shares</h2><p>Pratilipi rechecks these Drops with the server whenever you open this list.</p></div><button class="secondary-btn" id="active-refresh" type="button">Refresh</button></div>
         <div id="active-list" class="active-list"></div>
       </section>
@@ -686,6 +695,61 @@ async function renderRecent() {
   $$('[data-delete-recent]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteRecent, false); });
 }
 
+
+async function loadPublicDrop(dropId) {
+  const data = await api('/api/drop/' + encodeURIComponent(dropId));
+  state.publicShare = true;
+  state.dropId = dropId;
+  state.uploadUrl = PUBLIC_ORIGIN + '/u/' + dropId;
+  state.expiresAt = Number(data.drop.expires_at);
+  state.expiry = data.drop.expiry_option || '1d';
+  state.files = data.files || [];
+  state.texts = data.texts || [];
+  $('#home-page').hidden = true;
+  $('#active-view').hidden = true;
+  $('#public-view').hidden = false;
+  $('#access-dashboard').hidden = true;
+  $('#nav-active').hidden = true;
+  $('#nav-about').hidden = true;
+  $('#public-link').textContent = state.uploadUrl;
+  $('#public-items').innerHTML = [
+    ...state.files.map((file) =>
+      '<article class="public-item"><span class="public-item-icon">' + esc(iconFor(file.content_type || '')) + '</span><div><strong>' +
+      esc(file.name) + '</strong><small>' + formatBytes(Number(file.size)) + ' · ' + esc(file.content_type || file.format || 'file') +
+      '</small></div><a href="' + esc(fileUrl(file)) + '">Download</a></article>'
+    ),
+    ...state.texts.map((text) =>
+      '<article class="public-item"><span class="public-item-icon">TXT</span><div><strong>' +
+      esc((text.content || 'Text').slice(0, 100)) + '</strong><small>' + text.content.length.toLocaleString() +
+      ' characters</small></div><a href="' + esc(textUrl(text)) + '">Download</a></article>'
+    )
+  ].join('') || '<div class="empty-state big">This Drop is empty.</div>';
+  $('#public-copy-link').onclick = () => copyText(state.uploadUrl);
+}
+
+async function openActive() {
+  state.publicShare = false;
+  $('#public-view').hidden = true;
+  showView('active');
+}
+
+async function openShare(dropId) {
+  if (location.pathname === '/u/' + dropId) {
+    try {
+      await loadDrop(dropId);
+      showView('ready');
+      return;
+    } catch {}
+  }
+  history.replaceState({}, '', '/u/' + dropId);
+  try {
+    await loadDrop(dropId);
+    showView('ready');
+  } catch (error) {
+    toast(error.message, 'error');
+  }
+}
+
 async function renderActive() {
   const list = $('#active-list');
   if (!list) return;
@@ -706,15 +770,21 @@ function showView(view) {
   if (view === 'active') {
     $('#home-page').hidden = true;
     $('#active-view').hidden = false;
+    $('#public-view').hidden = true;
     $('#success-panel').hidden = true;
+  } else if (view === 'ready') {
+    $('#home-page').hidden = false;
+    $('#active-view').hidden = true;
+    $('#public-view').hidden = true;
+    $('#success-panel').hidden = false;
   } else {
     $('#home-page').hidden = false;
     $('#active-view').hidden = true;
-    if (view === 'home') $('#success-panel').hidden = true;
+    $('#public-view').hidden = true;
+    $('#success-panel').hidden = true;
   }
   $('#nav-home').classList.toggle('active', view !== 'active');
   $('#nav-active').classList.toggle('active', view === 'active');
-  if (view === 'active') renderActive();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -729,12 +799,14 @@ function newDrop() {
   state.uploadAssets = [];
   state.uploadController = null;
   state.uploading = 0;
+  state.publicShare = false;
   if ($('#expiry-select')) {
     $('#expiry-select').disabled = false;
     $('#expiry-select').value = '1d';
   }
   $('#home-page').hidden = false;
   $('#active-view').hidden = true;
+  $('#public-view').hidden = true;
   $('#upload-progress').hidden = true;
   $('#success-panel').hidden = true;
   if ($('#text-input')) $('#text-input').value = '';
@@ -957,14 +1029,11 @@ async function boot() {
   setupEvents();
   const match = location.pathname.match(/^\/u\/([^/]+)\/?$/);
   if (match) {
-    state.publicShare = true;
     try {
-      await loadDrop(match[1]);
-      $('#access-dashboard').style.display = 'none';
-      $('#nav-active').style.display = 'none';
-      $('#nav-about').style.display = 'none';
+      await loadPublicDrop(match[1]);
     } catch (error) {
       toast(error.message, 'error');
+      showView('home');
     }
   } else {
     newDrop();
