@@ -19,10 +19,7 @@ const state = {
   view: 'home',
   uploading: 0,
   batchId: 0,
-  publicShare: false,
-  uploadController: null,
-  pendingFiles: [],
-  uploadTheme: null
+  publicShare: false
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -115,11 +112,6 @@ function setBusy(delta) {
   state.uploading = Math.max(0, state.uploading + delta);
   document.body.classList.toggle('busy', state.uploading > 0);
 }
-function cancelUpload() {
-  if (!state.uploadController) return;
-  state.batchId += 1;
-  state.uploadController.abort();
-}
 
 function renderShell() {
   document.title = 'प्रतिलिपि — Pratilipi';
@@ -135,10 +127,7 @@ function renderShell() {
           <span><strong class="brand-word">प्रतिलिपि</strong><small class="brand-sub">Pratilipi</small></span>
         </a>
         <nav class="top-actions" aria-label="Primary">
-          <button class="nav-pill home-nav" id="nav-home" type="button">Home</button>
-          <button class="nav-pill" id="nav-active" type="button">Active Shares</button>
-          <button class="nav-pill about-nav" id="nav-about" type="button">About</button>
-          <span class="nav-tagline">Simple · Secure · Yours</span>
+          <button class="nav-pill" id="nav-active" type="button">Active uploads</button>
           <button class="nav-pill primary" id="new-drop" type="button">Send files</button>
         </nav>
       </header>
@@ -146,50 +135,55 @@ function renderShell() {
       <section id="home-view" class="home-view">
         <div class="home-intro">
           <p class="eyebrow">PRIVATE · TEMPORARY · SIMPLE</p>
-          <h1>One platform.<br /><span>Many possibilities.</span></h1>
-          <p class="intro-copy">Share files or preserve text through your own Pratilipi.</p>
+          <h1>Send files through<br /><span>your own wormhole.</span></h1>
+          <p class="intro-copy">Drop anything here, watch it travel, then share one clean link.</p>
         </div>
-        <div class="home-mode-grid">
-          <section class="mode-card file-theme" id="upload-card">
-            <div class="mode-card-head"><span class="mode-badge">1</span><div><p class="eyebrow">UPLOAD FILES · D4</p><h2>Drop your files, create your story.</h2><p>Select, drag & drop or paste files.</p></div></div>
-            <div class="mode-logo mode-logo-d4" aria-hidden="true"><span>प्रतिलिपि</span><i>❧</i></div>
-            <div class="mode-drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
-              <input id="file-input" type="file" multiple hidden />
-              <div class="mode-upload-icon">↑</div><h3>Drag & Drop files here</h3><span>or</span>
-              <button id="choose-files" class="cta" type="button">Choose files</button>
-              <small>Select, drag & drop, or use Ctrl/⌘+V</small>
-            </div>
-            <div class="mode-footer-tools"><button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Copy & Paste</button><label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for"><option value="1h">1 Hour</option><option value="12h">12 Hours</option><option value="1d" selected>1 Day</option><option value="1w">1 Week</option><option value="1m">1 Month</option></select></label></div>
-            <div class="mode-hints"><span>Any file type</span><span>Multiple files</span><span>QR ready</span></div>
-          </section>
-          <section id="text-panel" class="mode-card text-theme-panel" aria-label="Paste text">
-            <div class="mode-card-head"><span class="mode-badge text-badge">1</span><div><p class="eyebrow">PASTE TEXT · D9</p><h2>Write. Share. Preserve.</h2><p>Copy & paste your text below.</p></div></div>
-            <div class="mode-logo mode-logo-d9" aria-hidden="true"><span>प्रतिलिपि</span><i>⌁</i></div>
-            <textarea id="text-input" placeholder="Paste your text here…"></textarea>
-            <div class="text-tools"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
-            <div id="text-list" class="mini-results"></div>
-            <div class="mode-hints text-hints"><span>Notes</span><span>Code</span><span>Ideas</span><span>Content</span></div>
-          </section>
-        </div>
-        <div class="home-random-note"><strong>✦ Random theme on every upload</strong><span>D4 feather or D9 dragon — your upload scene is selected automatically.</span></div>
 
-      </section
+        <section class="wormhole-card" id="upload-card">
+          <div class="card-topline">
+            <span class="tiny-state"><i></i> Ready to send</span>
+            <label class="expiry-picker"><span>Keep for</span><select id="expiry-select" aria-label="Keep files for">${Object.entries(EXPIRY_OPTIONS).map(([key, label]) => `<option value="${key}"${key === '1d' ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
+          </div>
 
-        <section id="upload-scene" class="upload-scene" hidden aria-live="polite">
-          <div class="upload-scene-art"><span class="upload-decoration upload-decoration-a" aria-hidden="true"></span><span class="upload-decoration upload-decoration-b" aria-hidden="true"></span><div class="upload-logo" id="upload-logo" data-theme="d4"><span class="upload-logo-outline" aria-hidden="true">प्रतिलिपि</span><span class="upload-logo-fill" id="upload-logo-fill" aria-hidden="true">प्रतिलिपि</span></div><p class="upload-scene-label" id="upload-scene-label">Uploading your files…</p><strong class="upload-percent" id="upload-scene-percent">0%</strong><p class="upload-scene-sub" id="upload-scene-sub">Preparing your Pratilipi</p></div>
-          <div class="upload-progress-track"><i id="upload-scene-bar"></i></div>
-          <div class="upload-scene-meta"><span id="upload-scene-count">0 / 0 files</span><span id="upload-scene-bytes">0 B / 0 B</span><button id="cancel-upload-scene" class="upload-cancel" type="button">Cancel upload</button></div>
-          <div id="upload-queue" class="upload-queue upload-scene-queue"></div>
+          <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
+            <input id="file-input" type="file" multiple hidden />
+            <div class="wormhole-orbit" aria-hidden="true"><span class="orbit-core">↑</span><i class="orbit-ring ring-1"></i><i class="orbit-ring ring-2"></i><i class="orbit-ring ring-3"></i></div>
+            <h2>Select files to send</h2>
+            <p>Or drag stuff here</p>
+            <button id="choose-files" class="cta" type="button">Select files</button>
+            <small>Paste files with Ctrl/⌘+V · multiple files supported · no account needed</small>
+          </div>
+
+          <div class="quick-tools">
+            <button id="paste-files" class="soft-btn" type="button"><span>⌘</span> Paste from clipboard</button>
+            <button id="paste-text-toggle" class="soft-btn" type="button"><span>T</span> Paste text</button>
+            <button id="new-drop-inline" class="soft-btn" type="button"><span>↻</span> New drop</button>
+          </div>
+
+          <div class="privacy-row">
+            <div><b>Auto-expires</b><span id="expiry-help">After 24 hours</span></div>
+            <div><b>Direct download</b><span>No dashboard on file links</span></div>
+            <div><b>QR ready</b><span>Open from your phone</span></div>
+          </div>
+
+          <div id="upload-progress" class="upload-progress" hidden>
+            <div class="progress-head"><strong>Sending your files</strong><span id="progress-total">0%</span></div>
+            <div class="progress-track"><i id="progress-bar"></i></div>
+            <div id="upload-queue" class="upload-queue"></div>
+          </div>
         </section>
->
 
-      <section id="upload-complete-view" class="upload-complete-view" hidden>
-        <div class="upload-complete-card">
-          <div class="upload-complete-mark">✓</div>
-          <p class="eyebrow">TRANSFER COMPLETE</p>
-          <h2>Your Pratilipi Created!</h2>
-          <p>Everything is uploaded and ready to share.</p>
-        </div>
+        <section id="text-panel" class="utility-card" hidden>
+          <div class="utility-head"><div><p class="eyebrow">TEXT DROP</p><h2>Paste anything</h2></div><button id="paste-text-close" class="icon-btn" type="button">×</button></div>
+          <textarea id="text-input" placeholder="Paste or type text here…"></textarea>
+          <div class="utility-footer"><span id="text-count">0 characters</span><button id="save-text" class="cta small" type="button">Save text</button></div>
+          <div id="text-list" class="mini-results"></div>
+        </section>
+
+        <section class="recent-section">
+          <div class="section-heading"><div><p class="eyebrow">ON THIS DEVICE</p><h2>Recent drops</h2></div><button id="open-active" class="text-button" type="button">View all →</button></div>
+          <div id="recent-list" class="recent-grid"></div>
+        </section>
       </section>
 
       <section id="ready-view" class="ready-view" hidden>
@@ -211,15 +205,14 @@ function renderShell() {
       </section>
 
       <section id="active-view" class="active-view" hidden>
-        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active Shares</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
+        <div class="active-header"><div><p class="eyebrow">YOUR LOCAL HISTORY</p><h1>Active uploads</h1><p>Pratilipi rechecks these Drops with the server when you open this list.</p></div><button id="active-refresh" class="ready-btn" type="button">Refresh</button></div>
         <div id="active-list" class="active-grid"></div>
       </section>
 
-      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active Shares</button><button id="footer-new" type="button">Send files</button></div></footer>
+      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active uploads</button><button id="footer-new" type="button">Send files</button></div></footer>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <dialog id="file-review-dialog" class="qr-dialog file-review-dialog"><div class="dialog-inner"><button id="close-file-review" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">REVIEW FILES</p><h3>Ready to upload?</h3><p class="review-sub">Check what you are about to send. Nothing is uploaded until you confirm.</p><div id="file-review-list" class="file-review-list"></div><div class="dialog-actions"><button id="cancel-file-review" class="ready-btn" type="button">Cancel</button><button id="confirm-file-upload" class="cta small" type="button">Upload files</button></div></div></dialog>
     <dialog id="qr-dialog" class="qr-dialog"><div class="dialog-inner"><button id="close-qr" class="close-btn" type="button" aria-label="Close">×</button><p class="eyebrow">SCAN WITH PHONE</p><h3 id="qr-title">Pratilipi QR</h3><canvas id="qr-canvas"></canvas><input id="qr-url" readonly /><div class="dialog-actions"><button id="copy-qr-url" class="ready-btn" type="button">Copy URL</button><button id="close-qr-bottom" class="ready-btn" type="button">Done</button></div></div></dialog>
   `;
   updateExpiryHelp();
@@ -275,44 +268,10 @@ async function loadDrop(dropId) {
   await renderReadyState();
 }
 
-function setUploadSceneProgress(percent, bytes, totalBytes, completed, totalFiles) {
-  const pct = Math.max(0, Math.min(100, percent));
-  $('#upload-logo-fill').style.clipPath = `inset(${100 - pct}% 0 0 0)`;
-  $('#upload-scene-bar').style.width = `${pct}%`;
-  $('#upload-scene-percent').textContent = `${Math.round(pct)}%`;
-  $('#upload-scene-bytes').textContent = `${formatBytes(bytes)} / ${formatBytes(totalBytes)}`;
-  $('#upload-scene-count').textContent = `${completed} / ${totalFiles} files`;
-}
-
 function setProgress(percent, activeLabel = '') {
   const pct = Math.max(0, Math.min(100, percent));
   $('#progress-bar').style.width = `${pct}%`;
   $('#progress-total').textContent = activeLabel || `${Math.round(pct)}%`;
-}
-
-function reviewFiles(files) {
-  const valid = files.filter((file) => file instanceof File && file.size >= 0);
-  if (!valid.length || state.uploading) return;
-  state.pendingFiles = valid;
-  const list = $('#file-review-list');
-  list.innerHTML = valid.map((file) => `
-    <article class="file-review-item">
-      <span class="queue-icon">${esc(iconFor(file.type))}</span>
-      <div class="file-review-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>${esc(file.type || 'Unknown type')} · ${formatBytes(file.size)}</small></div>
-    </article>`).join('');
-  $('#file-review-dialog').showModal();
-}
-
-function closeFileReview() {
-  state.pendingFiles = [];
-  if ($('#file-review-dialog')?.open) $('#file-review-dialog').close();
-}
-
-function confirmFileUpload() {
-  const files = state.pendingFiles.slice();
-  state.pendingFiles = [];
-  if ($('#file-review-dialog')?.open) $('#file-review-dialog').close();
-  startUploadBatch(files);
 }
 
 function addQueueItem(file) {
@@ -329,7 +288,7 @@ function updateQueueItem(row, percent, label) {
   row.querySelector('small').textContent = label;
 }
 
-async function cloudinaryUpload(file, onProgress, signal) {
+async function cloudinaryUpload(file, onProgress) {
   const form = new FormData();
   form.append('file', file);
   form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -339,7 +298,6 @@ async function cloudinaryUpload(file, onProgress, signal) {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', CLOUDINARY_UPLOAD_URL);
     xhr.responseType = 'json';
-    signal?.addEventListener('abort', () => xhr.abort(), { once: true });
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
     };
@@ -354,20 +312,11 @@ async function cloudinaryUpload(file, onProgress, signal) {
   });
 }
 
-async function uploadOne(file, row, onProgress, signal, uploadedAssets) {
+async function uploadOne(file, row) {
   try {
     await ensureDrop();
     updateQueueItem(row, 0, 'Uploading…');
-    const uploaded = await cloudinaryUpload(file, (pct) => {
-      updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`);
-      onProgress?.(pct);
-    }, signal);
-    if (uploaded?.public_id) {
-      uploadedAssets.push({
-        publicId: uploaded.public_id,
-        resourceType: uploaded.resource_type || 'raw'
-      });
-    }
+    const uploaded = await cloudinaryUpload(file, (pct) => updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`));
     updateQueueItem(row, 100, 'Registering…');
     const done = await api(`/api/drop/${state.dropId}/complete`, {
       method: 'POST',
@@ -387,11 +336,6 @@ async function uploadOne(file, row, onProgress, signal, uploadedAssets) {
     row.classList.add('done');
     return done.file;
   } catch (error) {
-    if (error?.name === 'AbortError' || signal?.aborted) {
-      updateQueueItem(row, 0, 'Cancelled');
-      row.classList.add('cancelled');
-      return null;
-    }
     updateQueueItem(row, 0, error.message);
     row.classList.add('error');
     return null;
@@ -403,24 +347,12 @@ async function startUploadBatch(files) {
   if (!valid.length || state.uploading) return;
 
   const batch = ++state.batchId;
-  const controller = new AbortController();
-  state.uploadController = controller;
-  state.uploadTheme = Math.random() < 0.5 ? 'd4' : 'd9';
   setBusy(1);
   setMode('uploading');
-  $('#home-view').hidden = true;
-  $('#ready-view').hidden = true;
-  $('#active-view').hidden = true;
-  $('#upload-complete-view').hidden = true;
-  $('#upload-scene').hidden = false;
-  $('#upload-logo').dataset.theme = state.uploadTheme;
-  $('#upload-logo').classList.remove('is-complete');
-  $('#upload-scene-label').textContent = state.uploadTheme === 'd4' ? 'Uploading your files…' : 'Your Pratilipi is taking shape…';
-  $('#upload-scene-sub').textContent = state.uploadTheme === 'd4' ? 'Feathers in motion · transfer in progress' : 'Dragon flame engaged · transfer in progress';
+  $('#upload-progress').hidden = false;
   $('#upload-queue').innerHTML = '';
-  $('#upload-scene-percent').textContent = '0%';
-  $('#upload-scene-bar').style.width = '0%';
-  $('#upload-logo-fill').style.clipPath = 'inset(100% 0 0 0)';
+  $('#progress-total').textContent = `0 / ${valid.length}`;
+  $('#progress-bar').style.width = '0%';
   valid.forEach(addQueueItem);
   const rows = $$('#upload-queue .queue-item');
 
@@ -428,75 +360,28 @@ async function startUploadBatch(files) {
     await ensureDrop();
     let completed = 0;
     let succeeded = 0;
-    const totalBytes = valid.reduce((sum, file) => sum + file.size, 0);
-    const uploadedBytes = new Array(valid.length).fill(0);
-    const uploadedAssets = [];
-
-    const updateOverallProgress = () => {
-      const bytes = uploadedBytes.reduce((sum, value) => sum + value, 0);
-      const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 100;
-      setUploadSceneProgress(percent, bytes, totalBytes, completed, valid.length);
-    };
-
-    updateOverallProgress();
-
     await Promise.all(valid.map(async (file, index) => {
-      const uploaded = await uploadOne(file, rows[index], (pct) => {
-        uploadedBytes[index] = file.size * (pct / 100);
-        updateOverallProgress();
-      }, controller.signal, uploadedAssets);
-
-      if (uploaded) {
-        uploadedBytes[index] = file.size;
-        succeeded += 1;
-      } else {
-        uploadedBytes[index] = 0;
-      }
+      const uploaded = await uploadOne(file, rows[index]);
+      if (uploaded) succeeded += 1;
       completed += 1;
-      updateOverallProgress();
+      setProgress((completed / valid.length) * 100, `${completed} / ${valid.length}`);
     }));
 
-    if (controller.signal.aborted) {
-      try {
-        if (state.dropId && uploadedAssets.length) {
-          await api(`/api/drop/${state.dropId}/cancel`, {
-            method: 'POST',
-            body: JSON.stringify({ assets: uploadedAssets })
-          });
-        }
-      } catch (cleanupError) {
-        console.error('Cancelled upload cleanup failed', cleanupError);
-        toast('Upload cancelled, but some temporary files could not be cleaned up.', 'error');
-      }
-      $('#upload-scene').hidden = true;
-      setMode('home');
-      toast(succeeded ? `Upload cancelled. ${succeeded} file(s) completed.` : 'Upload cancelled.');
-      return;
-    }
-
     if (batch !== state.batchId) return;
-
     await refreshDrop();
-    if (succeeded === valid.length && state.files.length + state.texts.length) {
-      setUploadSceneProgress(100, totalBytes, totalBytes, valid.length, valid.length);
-      $('#upload-logo').classList.add('is-complete');
-      $('#upload-scene-label').textContent = 'Your Pratilipi Created!';
-      $('#upload-scene-sub').textContent = state.uploadTheme === 'd4' ? 'Your files are ready to travel.' : 'Your story is ready to travel.';
-      await new Promise((resolve) => setTimeout(resolve, 1050));
-      $('#upload-scene').hidden = true;
+    $('#upload-progress').hidden = true;
+    if (state.files.length + state.texts.length) {
       await renderReadyState();
-      toast('Pratilipi created. Ready to share.');
+      toast(succeeded === valid.length ? 'Drop ready to share.' : `${succeeded} of ${valid.length} files uploaded.`, succeeded === valid.length ? 'normal' : 'error');
     } else {
-      $('#upload-scene').hidden = true;
       setMode('home');
-      toast(succeeded ? `${succeeded} of ${valid.length} files uploaded.` : 'No files were uploaded.', 'error');
+      toast('No files were uploaded.', 'error');
     }
   } catch (error) {
-    $('#upload-scene').hidden = true;
+    $('#upload-progress').hidden = true;
     setMode('home');
     toast(error.message, 'error');
   } finally {
-    if (state.uploadController === controller) state.uploadController = null;
     setBusy(-1);
   }
 }
@@ -615,8 +500,8 @@ function updateTextCount() {
 
 function toggleTextPanel(force) {
   const panel = $('#text-panel');
-  panel.hidden = false;
-  if (force !== false) setTimeout(() => $('#text-input').focus(), 60);
+  panel.hidden = force === undefined ? !panel.hidden : !force;
+  if (!panel.hidden) setTimeout(() => $('#text-input').focus(), 60);
 }
 
 async function copyText(value) {
@@ -746,10 +631,7 @@ async function renderRecent() {
     list.innerHTML = '<div class="recent-empty">No recent Drops yet. Select a file to create your first one.</div>';
     return;
   }
-  list.innerHTML = records.map((item) => {
-    const stillUploading = state.uploading > 0 && item.id === state.dropId;
-    return `<article class="recent-card ${stillUploading ? 'is-uploading' : ''}"><div class="recent-main"><span>${stillUploading ? 'UPLOADING' : 'DROP'}</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${stillUploading ? 'Still being uploaded…' : `${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}`}</small></div><div class="recent-actions">${stillUploading ? '<span class="uploading-note">Please wait…</span>' : `<button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button>`}</div></article>`;
-  }).join('');
+  list.innerHTML = records.map((item) => `<article class="recent-card"><div class="recent-main"><span>DROP</span><strong>${esc(item.id.slice(0, 12))}…</strong><small>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</small></div><div class="recent-actions"><button data-open-recent="${esc(item.id)}" type="button">Open</button><button data-delete-recent="${esc(item.id)}" type="button">Delete</button></div></article>`).join('');
   $$('[data-open-recent]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openRecent); });
   $$('[data-delete-recent]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteRecent, false); });
 }
@@ -763,10 +645,7 @@ async function renderActive() {
     list.innerHTML = '<div class="empty-state large">No active uploads on this browser yet.</div>';
     return;
   }
-  list.innerHTML = records.map((item) => {
-    const stillUploading = state.uploading > 0 && item.id === state.dropId;
-    return `<article class="active-card ${stillUploading ? 'is-uploading' : ''}"><div class="active-main"><span class="recent-label">${stillUploading ? 'UPLOADING' : 'ACTIVE DROP'}</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${stillUploading ? 'Still being uploaded…' : `${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}`}</p><small>${stillUploading ? 'Download / view will be available after upload completes.' : esc(item.uploadUrl)}</small></div><div class="active-actions">${stillUploading ? '<span class="uploading-note">Please wait…</span>' : `<button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button>`}</div></article>`;
-  }).join('');
+  list.innerHTML = records.map((item) => `<article class="active-card"><div class="active-main"><span class="recent-label">ACTIVE DROP</span><h3>${esc(item.id.slice(0, 16))}…</h3><p>${esc(EXPIRY_OPTIONS[item.expiry] || item.expiry)} · ${formatRemaining(item.expiresAt)}</p><small>${esc(item.uploadUrl)}</small></div><div class="active-actions"><button data-open-active="${esc(item.id)}" class="cta small" type="button">Open</button><button data-copy-active="${esc(item.uploadUrl)}" class="ready-btn" type="button">Copy URL</button><button data-delete-active="${esc(item.id)}" class="ready-btn danger" type="button">Delete all</button></div></article>`).join('');
   $$('[data-open-active]').forEach((button) => { button.onclick = () => openDrop(button.dataset.openActive); });
   $$('[data-copy-active]').forEach((button) => { button.onclick = () => copyText(button.dataset.copyActive); });
   $$('[data-delete-active]').forEach((button) => { button.onclick = () => deleteEntireDrop(button.dataset.deleteActive, false); });
@@ -777,7 +656,6 @@ function showView(view) {
   const active = view === 'active';
   const ready = view === 'ready';
   $('#home-view').hidden = active || ready;
-  $('#upload-scene').hidden = true;
   $('#ready-view').hidden = !ready;
   $('#active-view').hidden = !active;
   $('#nav-active').classList.toggle('active', active);
@@ -803,9 +681,8 @@ function newDrop() {
   $('#home-view').hidden = false;
   $('#ready-view').hidden = true;
   $('#active-view').hidden = true;
-  $('#upload-scene').hidden = true;
-  $('#upload-complete-view').hidden = true;
-  $('#text-panel').hidden = false;
+  $('#text-panel').hidden = true;
+  $('#upload-progress').hidden = true;
   $('#ready-card').classList.remove('reveal');
   $('#file-input').value = '';
   setMode('home');
@@ -816,17 +693,13 @@ function newDrop() {
 
 function setupEvents() {
   const zone = $('#drop-zone');
-  $('#choose-files').onclick = (event) => { event.stopPropagation(); $('#file-input').click(); };
-  $('#cancel-upload-scene').onclick = cancelUpload;
-  $('#close-file-review').onclick = closeFileReview;
-  $('#cancel-file-review').onclick = closeFileReview;
-  $('#confirm-file-upload').onclick = confirmFileUpload;
+  $('#choose-files').onclick = () => $('#file-input').click();
   $('#file-input').onchange = (event) => {
     const files = [...event.target.files];
     // Reset immediately so selecting the same file after a failed/cancelled upload
     // reliably emits another change event.
     event.target.value = '';
-    reviewFiles(files);
+    startUploadBatch(files);
   };
 
   ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
@@ -839,7 +712,7 @@ function setupEvents() {
     zone.classList.remove('dragover');
     if (!state.uploading) setMode('home');
   }));
-  zone.addEventListener('drop', (event) => reviewFiles([...event.dataTransfer.files]));
+  zone.addEventListener('drop', (event) => startUploadBatch([...event.dataTransfer.files]));
   zone.addEventListener('keydown', (event) => {
     if (event.target !== zone) return;
     if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#file-input').click(); }
@@ -847,7 +720,7 @@ function setupEvents() {
 
   document.addEventListener('paste', (event) => {
     const files = [...(event.clipboardData?.items || [])].map((item) => item.kind === 'file' ? item.getAsFile() : null).filter(Boolean);
-    if (files.length) { event.preventDefault(); reviewFiles(files); return; }
+    if (files.length) { event.preventDefault(); startUploadBatch(files); return; }
     const text = event.clipboardData?.getData('text/plain');
     if (text && document.activeElement !== $('#text-input')) {
       toggleTextPanel(true);
@@ -867,15 +740,15 @@ function setupEvents() {
         const blob = await item.getType(type);
         if (blob) files.push(new File([blob], `clipboard-${Date.now()}.${type.split('/')[1] || 'png'}`, { type }));
       }
-      if (files.length) reviewFiles(files);
+      if (files.length) startUploadBatch(files);
       else toast('No files found in clipboard.', 'error');
     } catch {
       toast('Clipboard access was denied by the browser.', 'error');
     }
   };
 
-  $('#paste-text-toggle')?.addEventListener('click', () => toggleTextPanel(true));
-  $('#paste-text-close')?.addEventListener('click', () => toggleTextPanel(false));
+  $('#paste-text-toggle').onclick = () => toggleTextPanel(true);
+  $('#paste-text-close').onclick = () => toggleTextPanel(false);
   $('#save-text').onclick = saveText;
   $('#text-input').oninput = updateTextCount;
   $('#copy-result-link').onclick = () => copyText($('#result-link').value);
@@ -885,9 +758,9 @@ function setupEvents() {
   $('#send-more').onclick = () => { newDrop(); showView('home'); };
   $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId, true);
   $('#expiry-select').onchange = updateExpiryHelp;
-  $('#nav-home').onclick = () => { newDrop(); showView('home'); };
-  $('#nav-about').onclick = () => toast('प्रतिलिपि — temporary sharing for files and text.');
   $('#new-drop').onclick = () => { newDrop(); showView('home'); };
+  $('#new-drop-inline').onclick = () => { newDrop(); showView('home'); };
+  $('#open-active').onclick = () => showView('active');
   $('#nav-active').onclick = () => showView('active');
   $('#footer-active').onclick = () => showView('active');
   $('#footer-new').onclick = () => { newDrop(); showView('home'); };
