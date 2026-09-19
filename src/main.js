@@ -159,7 +159,33 @@ function renderShell() {
         <div class="mode-grid">
           <section class="mode-card file-card" id="upload-card">
             <div class="card-title-row"><span class="step-dot violet">1</span><div><h2>Upload Files</h2><p>Select, Drag &amp; Drop or Choose Files</p></div></div>
-            <div class="visual-logo file-logo"><svg viewBox="0 0 660 180"><defs><linearGradient id="fileWord" x1="0" x2="1"><stop stop-color="#d56cff"/><stop offset=".48" stop-color="#9b7cff"/><stop offset="1" stop-color="#52eaff"/></linearGradient><filter id="fileGlow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M72 141C134 96 183 44 251 25C315 8 367 23 426 53" fill="none" stroke="#7a42ff" stroke-width="2"/><path d="M96 149C160 122 213 110 267 104C331 98 383 79 438 51" fill="none" stroke="#d04cff" stroke-width="2" opacity=".85"/><text x="332" y="119" text-anchor="middle" fill="url(#fileWord)" filter="url(#fileGlow)" font-size="91" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text><path d="M120 132C85 94 80 52 101 16C138 30 158 71 144 111C137 128 125 139 120 132Z" fill="url(#fileWord)"/><path d="M503 143C540 114 578 63 589 15C550 15 517 33 503 66C490 97 490 127 503 143Z" fill="url(#fileWord)"/><path d="M130 119C100 93 91 59 103 28M518 125C546 91 566 57 582 26" fill="none" stroke="#e2d5ff" stroke-width="3"/></svg><h3>Drop Your Files. Create Your Story.</h3></div>
+            <div class="visual-logo file-logo">
+  <svg viewBox="0 0 700 190" aria-hidden="true">
+    <defs>
+      <linearGradient id="fileWord" x1="0" x2="1"><stop stop-color="#e06cff"/><stop offset=".45" stop-color="#8c78ff"/><stop offset="1" stop-color="#4de8ff"/></linearGradient>
+      <radialGradient id="fileHalo"><stop stop-color="#8f3fff" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+      <filter id="fileGlow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <ellipse cx="350" cy="92" rx="250" ry="92" fill="url(#fileHalo)"/>
+    <path d="M44 132C121 82 176 45 259 30C339 15 411 31 488 70" fill="none" stroke="#6742ff" stroke-width="2" opacity=".75"/>
+    <path d="M74 151C162 111 234 103 304 96C378 89 448 67 520 32" fill="none" stroke="#cf43ff" stroke-width="2" opacity=".78"/>
+    <path d="M144 151C176 124 204 104 229 93M515 148C548 116 567 89 585 54" fill="none" stroke="#70d8ff" stroke-width="2" opacity=".5"/>
+    <g fill="#dca8ff">
+      <circle cx="110" cy="60" r="2"/><circle cx="142" cy="37" r="1.7"/><circle cx="188" cy="80" r="1.5"/><circle cx="541" cy="82" r="1.8"/><circle cx="575" cy="48" r="2"/><circle cx="610" cy="90" r="1.4"/><circle cx="96" cy="116" r="1.4"/>
+    </g>
+    <g stroke="#7fe9ff" stroke-width="2" opacity=".8">
+      <path d="M88 96h16M96 88v16M570 114h13M576.5 107.5v13"/>
+    </g>
+    <text x="350" y="125" text-anchor="middle" fill="url(#fileWord)" filter="url(#fileGlow)" font-size="93" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text>
+    <g fill="url(#fileWord)" filter="url(#fileGlow)">
+      <path d="M142 146C108 112 96 72 111 28C151 42 178 84 162 125C156 141 148 149 142 146Z"/>
+      <path d="M553 149C589 119 616 78 624 26C586 29 550 49 535 83C522 113 530 138 553 149Z"/>
+    </g>
+    <path d="M146 135C119 104 113 68 117 39M548 139C576 107 598 73 617 39" stroke="#eadcff" stroke-width="3" fill="none" opacity=".9"/>
+    <path d="M170 108C147 103 129 88 120 70M527 110C553 100 576 82 591 61" stroke="#7ee9ff" stroke-width="2" fill="none" opacity=".65"/>
+  </svg>
+  <h3>Drop Your Files. Create Your Story.</h3>
+</div>
 
             <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
               <input id="file-input" type="file" multiple hidden>
@@ -174,7 +200,26 @@ function renderShell() {
 
           <section class="mode-card text-card" id="text-panel">
             <div class="card-title-row"><span class="step-dot gold">1</span><div><h2>Paste Text</h2><p>Write, Share &amp; Preserve</p></div></div>
-            <div class="visual-logo text-logo"><svg viewBox="0 0 660 180"><defs><linearGradient id="textWord" x1="0" x2="1"><stop stop-color="#ffe267"/><stop offset=".52" stop-color="#ffb74b"/><stop offset="1" stop-color="#ff4b2e"/></linearGradient><filter id="textGlow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><text x="325" y="121" text-anchor="middle" fill="url(#textWord)" filter="url(#textGlow)" font-size="92" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text><path d="M121 132C83 94 80 52 100 14C141 27 155 69 139 111C133 126 125 139 121 132Z" fill="url(#textWord)"/><path d="M513 143C550 123 579 95 596 65C620 24 614 -5 590 5C552 18 527 44 512 80C499 105 500 129 513 143Z" fill="none" stroke="url(#textWord)" stroke-width="14" stroke-linecap="round"/><path d="M540 32C569 41 584 58 596 80C570 89 547 82 526 65" fill="none" stroke="#ff6a30" stroke-width="7" stroke-linecap="round"/></svg><h3>Write. Share. Preserve.</h3></div>
+            <div class="visual-logo text-logo">
+  <svg viewBox="0 0 700 190" aria-hidden="true">
+    <defs>
+      <linearGradient id="textWord" x1="0" x2="1"><stop stop-color="#ffe76a"/><stop offset=".42" stop-color="#ffb54a"/><stop offset="1" stop-color="#ff4a2e"/></linearGradient>
+      <filter id="textGlow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <path d="M146 143C105 111 99 70 119 25C158 37 181 73 170 114C165 133 153 149 146 143Z" fill="url(#textWord)" opacity=".93"/>
+    <g fill="#ffab44"><circle cx="96" cy="80" r="2"/><circle cx="126" cy="49" r="1.7"/><circle cx="579" cy="37" r="2"/><circle cx="620" cy="72" r="1.7"/><circle cx="596" cy="130" r="1.5"/></g>
+    <g stroke="#ff7140" stroke-width="2" opacity=".65">
+      <path d="M77 107h12M83 101v12M612 52h12M618 46v12"/>
+    </g>
+    <text x="325" y="125" text-anchor="middle" fill="url(#textWord)" filter="url(#textGlow)" font-size="95" font-family="Noto Sans Devanagari,Mangal,sans-serif" font-weight="900">प्रतिलिपि</text>
+    <path d="M508 150C547 128 582 97 604 59C630 14 623 -8 592 6C553 20 518 49 503 86C491 111 494 137 508 150Z" fill="none" stroke="url(#textWord)" stroke-width="14" stroke-linecap="round" filter="url(#textGlow)"/>
+    <path d="M531 39C560 45 583 62 596 84C572 96 548 89 524 70" fill="none" stroke="#ff6c32" stroke-width="7" stroke-linecap="round"/>
+    <path d="M552 57C578 64 594 78 605 96" fill="none" stroke="#ffd056" stroke-width="4" stroke-linecap="round"/>
+    <path d="M557 24C575 28 588 35 602 44" fill="none" stroke="#ff3f2d" stroke-width="3" stroke-linecap="round"/>
+    <path d="M579 112C590 100 601 93 615 90" fill="none" stroke="#ff943b" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <h3>Write. Share. Preserve.</h3>
+</div>
             <textarea id="text-input" placeholder="Paste your text here..."></textarea>
             <div class="text-count" id="text-count">0 characters</div>
             <div class="text-chip-row"><button class="text-chip" data-template="Notes" type="button"><span>▣</span> Notes</button><button class="text-chip" data-template="Code" type="button"><span>&lt;/&gt;</span> Code</button><button class="text-chip" data-template="Ideas" type="button"><span>◉</span> Ideas</button><button class="text-chip" data-template="Content" type="button"><span>▤</span> Content</button></div>
