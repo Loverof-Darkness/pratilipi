@@ -312,11 +312,14 @@ async function cloudinaryUpload(file, onProgress) {
   });
 }
 
-async function uploadOne(file, row) {
+async function uploadOne(file, row, onProgress) {
   try {
     await ensureDrop();
     updateQueueItem(row, 0, 'Uploading…');
-    const uploaded = await cloudinaryUpload(file, (pct) => updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`));
+    const uploaded = await cloudinaryUpload(file, (pct) => {
+      updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`);
+      onProgress?.(pct);
+    });
     updateQueueItem(row, 100, 'Registering…');
     const done = await api(`/api/drop/${state.dropId}/complete`, {
       method: 'POST',
@@ -360,11 +363,34 @@ async function startUploadBatch(files) {
     await ensureDrop();
     let completed = 0;
     let succeeded = 0;
+    const totalBytes = valid.reduce((sum, file) => sum + file.size, 0);
+    const uploadedBytes = new Array(valid.length).fill(0);
+
+    const updateOverallProgress = () => {
+      const bytes = uploadedBytes.reduce((sum, value) => sum + value, 0);
+      const percent = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0;
+      setProgress(percent, percent.toFixed(0) + '%');
+    };
+
+    updateOverallProgress();
+
     await Promise.all(valid.map(async (file, index) => {
-      const uploaded = await uploadOne(file, rows[index]);
-      if (uploaded) succeeded += 1;
+      const uploaded = await uploadOne(file, rows[index], (pct) => {
+        uploadedBytes[index] = file.size * (pct / 100);
+        updateOverallProgress();
+      });
+      if (uploaded) {
+        uploadedBytes[index] = file.size;
+        succeeded += 1;
+      } else {
+        uploadedBytes[index] = 0;
+      }
       completed += 1;
-      setProgress((completed / valid.length) * 100, `${completed} / ${valid.length}`);
+      updateOverallProgress();
+      setProgress(
+        totalBytes > 0 ? (uploadedBytes.reduce((sum, value) => sum + value, 0) / totalBytes) * 100 : 100,
+        completed + ' / ' + valid.length + ' complete'
+      );
     }));
 
     if (batch !== state.batchId) return;
