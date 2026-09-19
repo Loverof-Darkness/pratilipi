@@ -215,7 +215,7 @@ function renderShell() {
         <div id="active-list" class="active-grid"></div>
       </section>
 
-      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active uploads</button><button id="footer-new" type="button">Send files</button></div></footer>
+      <footer class="footer"><div><strong>प्रतिलिपि</strong><span>Temporary sharing, simple by design.</span></div><div class="footer-links"><a href="/">Home</a><button id="footer-active" type="button">Active Shares</button><button id="footer-new" type="button">Send files</button></div></footer>
     </main>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
