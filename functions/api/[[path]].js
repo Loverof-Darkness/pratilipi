@@ -142,6 +142,7 @@ export async function onRequest({ request, env, params }) {
         if (!publicId) continue;
         try {
           await destroyCloudinaryAsset(env, { publicId, resourceType, invalidate: true });
+          await env.DB.prepare('DELETE FROM files WHERE drop_id = ?1 AND public_id = ?2').bind(dropId, publicId).run();
           deleted += 1;
         } catch (cause) {
           console.error('Cancelled upload cleanup failed', dropId, publicId, cause);
