@@ -442,7 +442,6 @@ async function startUploadBatch(files) {
   $('#upload-logo').classList.remove('is-complete');
   $('#upload-scene-label').textContent = state.uploadTheme === 'd4' ? 'Uploading your files…' : 'Your Pratilipi is taking shape…';
   $('#upload-scene-sub').textContent = state.uploadTheme === 'd4' ? 'Feathers in motion · transfer in progress' : 'Dragon flame engaged · transfer in progress';
-  $('#upload-scene-queue').innerHTML = '';
   $('#upload-queue').innerHTML = '';
   $('#upload-scene-percent').textContent = '0%';
   $('#upload-scene-bar').style.width = '0%';
