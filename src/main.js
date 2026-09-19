@@ -810,8 +810,7 @@ function newDrop() {
 
 function setupEvents() {
   const zone = $('#drop-zone');
-  $('#choose-files').onclick = () => $('#file-input').click();
-  $('#cancel-upload').onclick = cancelUpload;
+  $('#choose-files').onclick = (event) => { event.stopPropagation(); $('#file-input').click(); };
   $('#cancel-upload-scene').onclick = cancelUpload;
   $('#close-file-review').onclick = closeFileReview;
   $('#cancel-file-review').onclick = closeFileReview;
@@ -881,8 +880,6 @@ function setupEvents() {
   $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId, true);
   $('#expiry-select').onchange = updateExpiryHelp;
   $('#new-drop').onclick = () => { newDrop(); showView('home'); };
-  $('#new-drop-inline').onclick = () => { newDrop(); showView('home'); };
-  $('#open-active').onclick = () => showView('active');
   $('#nav-active').onclick = () => showView('active');
   $('#footer-active').onclick = () => showView('active');
   $('#footer-new').onclick = () => { newDrop(); showView('home'); };
