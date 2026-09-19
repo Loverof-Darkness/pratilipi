@@ -135,7 +135,10 @@ function renderShell() {
           <span><strong class="brand-word">प्रतिलिपि</strong><small class="brand-sub">Pratilipi</small></span>
         </a>
         <nav class="top-actions" aria-label="Primary">
-          <button class="nav-pill" id="nav-active" type="button">Active uploads</button>
+          <button class="nav-pill home-nav" id="nav-home" type="button">Home</button>
+          <button class="nav-pill" id="nav-active" type="button">Active Shares</button>
+          <button class="nav-pill about-nav" id="nav-about" type="button">About</button>
+          <span class="nav-tagline">Simple · Secure · Yours</span>
           <button class="nav-pill primary" id="new-drop" type="button">Send files</button>
         </nav>
       </header>
@@ -878,6 +881,8 @@ function setupEvents() {
   $('#send-more').onclick = () => { newDrop(); showView('home'); };
   $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId, true);
   $('#expiry-select').onchange = updateExpiryHelp;
+  $('#nav-home').onclick = () => { newDrop(); showView('home'); };
+  $('#nav-about').onclick = () => toast('प्रतिलिपि — temporary sharing for files and text.');
   $('#new-drop').onclick = () => { newDrop(); showView('home'); };
   $('#nav-active').onclick = () => showView('active');
   $('#footer-active').onclick = () => showView('active');
