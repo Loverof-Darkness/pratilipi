@@ -82,3 +82,10 @@ html,body{background:#0b0c10!important}.space-bg{background:radial-gradient(circ
 /* Uploading state: never expose partial download/view controls */
 .recent-card.is-uploading,.active-card.is-uploading{opacity:.82}
 .uploading-note{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border:1px solid rgba(180,145,220,.24);border-radius:9px;color:#cfc3df;font-size:.78rem;font-weight:700}
+
+/* File review before upload */
+.file-review-dialog .dialog-inner{width:min(680px,calc(100vw - 28px));max-height:min(82vh,720px);overflow:auto}
+.review-sub{margin:0 0 16px;color:#bdb2ca;font-size:.88rem;line-height:1.5}
+.file-review-list{display:grid;gap:8px;margin:0 0 18px;max-height:45vh;overflow:auto}
+.file-review-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid rgba(180,145,220,.18);border-radius:10px;background:rgba(20,13,29,.62)}
+.file-review-main{min-width:0;display:grid;gap:3px}.file-review-main strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-review-main small{color:#9e93aa;font-size:.74rem}
