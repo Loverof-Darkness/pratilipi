@@ -19,7 +19,11 @@ const state = {
   view: 'home',
   uploading: 0,
   batchId: 0,
-  publicShare: false
+  publicShare: false,
+  uploadController: null,
+  uploadAssets: [],
+  authenticated: false,
+  authConfigured: true
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -281,102 +285,153 @@ function updateQueueItem(row, percent, label) {
   row.querySelector('small').textContent = label;
 }
 
-async function cloudinaryUpload(file, onProgress) {
+async function cloudinaryUpload(file, onProgress, signal) {
   const form = new FormData();
   form.append('file', file);
   form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   form.append('folder', 'pratilipi');
-
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', CLOUDINARY_UPLOAD_URL);
     xhr.responseType = 'json';
+    const abort = () => xhr.abort();
+    if (signal) signal.addEventListener('abort', abort, { once: true });
     xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onProgress((event.loaded / event.total) * 100);
+      if (event.lengthComputable) onProgress(event.loaded, event.total);
     };
     xhr.onerror = () => reject(new Error('Network error while uploading to Cloudinary.'));
-    xhr.onabort = () => reject(new Error('Upload cancelled.'));
+    xhr.onabort = () => reject(new DOMException('Upload cancelled.', 'AbortError'));
     xhr.onload = () => {
       const payload = xhr.response || (() => { try { return JSON.parse(xhr.responseText || '{}'); } catch { return {}; } })();
       if (xhr.status >= 200 && xhr.status < 300) resolve(payload);
-      else reject(new Error(payload.error?.message || `Cloudinary upload failed (${xhr.status})`));
+      else reject(new Error(payload.error?.message || 'Cloudinary upload failed (' + xhr.status + ')'));
     };
     xhr.send(form);
   });
 }
 
-async function uploadOne(file, row) {
-  try {
-    await ensureDrop();
-    updateQueueItem(row, 0, 'Uploading…');
-    const uploaded = await cloudinaryUpload(file, (pct) => updateQueueItem(row, pct, `Uploading · ${Math.round(pct)}%`));
-    updateQueueItem(row, 100, 'Registering…');
-    const done = await api(`/api/drop/${state.dropId}/complete`, {
-      method: 'POST',
-      body: JSON.stringify({
-        publicId: uploaded.public_id,
-        secureUrl: uploaded.secure_url,
-        resourceType: uploaded.resource_type,
-        originalFilename: uploaded.original_filename,
-        name: file.name,
-        contentType: file.type || 'application/octet-stream',
-        bytes: uploaded.bytes || file.size,
-        format: uploaded.format || ''
-      })
-    });
-    state.files.push(done.file);
-    updateQueueItem(row, 100, 'Uploaded');
-    row.classList.add('done');
-    return done.file;
-  } catch (error) {
-    updateQueueItem(row, 0, error.message);
-    row.classList.add('error');
-    return null;
-  }
+async function uploadOne(file, row, onProgress, signal) {
+  updateQueueItem(row, 0, 'Uploading...');
+  const uploaded = await cloudinaryUpload(file, onProgress, signal);
+  updateQueueItem(row, 100, 'Registering...');
+  const done = await api('/api/drop/' + state.dropId + '/complete', {
+    method: 'POST',
+    body: JSON.stringify({
+      publicId: uploaded.public_id,
+      secureUrl: uploaded.secure_url,
+      resourceType: uploaded.resource_type,
+      originalFilename: uploaded.original_filename,
+      name: file.name,
+      contentType: file.type || 'application/octet-stream',
+      bytes: uploaded.bytes || file.size,
+      format: uploaded.format || ''
+    })
+  });
+  state.uploadAssets.push({ publicId: uploaded.public_id, resourceType: uploaded.resource_type });
+  state.files.push(done.file);
+  updateQueueItem(row, 100, 'Uploaded');
+  row.classList.add('done');
+  return done.file;
+}
+
+function setAggregateProgress(loaded, total, startedAt, count) {
+  const pct = total ? (loaded / total) * 100 : 0;
+  $('#progress-bar').style.width = pct + '%';
+  $('#progress-percent').textContent = Math.round(pct) + '%';
+  $('#progress-bytes').textContent = formatBytes(loaded) + ' / ' + formatBytes(total);
+  const elapsed = (Date.now() - startedAt) / 1000;
+  const speed = elapsed > 0 ? loaded / elapsed : 0;
+  const remaining = speed > 0 ? Math.max(0, total - loaded) / speed : 0;
+  $('#progress-time').textContent = remaining > 0 ? 'Estimated time: ' + Math.ceil(remaining) + 's' : 'Estimated time: —';
+  return pct;
 }
 
 async function startUploadBatch(files) {
   const valid = files.filter((file) => file instanceof File && file.size >= 0);
   if (!valid.length || state.uploading) return;
+  state.uploading = 1;
+  state.uploadController = new AbortController();
+  state.uploadAssets = [];
+  state.files = [];
+  state.texts = [];
+  const controller = state.uploadController;
+  const batchId = ++state.batchId;
+  const totalBytes = valid.reduce((sum, file) => sum + file.size, 0);
+  const loaded = new Array(valid.length).fill(0);
+  const startedAt = Date.now();
 
-  const batch = ++state.batchId;
-  setBusy(1);
-  setMode('uploading');
   $('#upload-progress').hidden = false;
+  $('#success-panel').hidden = true;
   $('#upload-queue').innerHTML = '';
-  $('#progress-total').textContent = `0 / ${valid.length}`;
+  $('#progress-files').textContent = valid.length + ' files';
+  $('#progress-bytes').textContent = '0 B / ' + formatBytes(totalBytes);
+  $('#progress-percent').textContent = '0%';
   $('#progress-bar').style.width = '0%';
-  valid.forEach(addQueueItem);
-  const rows = $$('#upload-queue .queue-item');
+  $('#progress-time').textContent = 'Estimated time: —';
+  $('#upload-progress').scrollIntoView({ behavior: 'smooth', block: 'center' });
 
   try {
     await ensureDrop();
-    let completed = 0;
-    let succeeded = 0;
-    await Promise.all(valid.map(async (file, index) => {
-      const uploaded = await uploadOne(file, rows[index]);
-      if (uploaded) succeeded += 1;
-      completed += 1;
-      setProgress((completed / valid.length) * 100, `${completed} / ${valid.length}`);
+    const rows = valid.map(addQueueItem);
+    const results = await Promise.all(valid.map(async (file, index) => {
+      try {
+        return await uploadOne(file, rows[index], (bytes, fileTotal) => {
+          loaded[index] = bytes;
+          setAggregateProgress(loaded.reduce((a, b) => a + b, 0), totalBytes, startedAt, valid.length);
+          updateQueueItem(rows[index], fileTotal ? (bytes / fileTotal) * 100 : 0, 'Uploading...');
+        }, controller.signal);
+      } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        updateQueueItem(rows[index], 0, error.message);
+        rows[index].classList.add('error');
+        return null;
+      }
     }));
 
-    if (batch !== state.batchId) return;
+    if (batchId !== state.batchId || controller.signal.aborted) return;
+    const successCount = results.filter(Boolean).length;
     await refreshDrop();
-    $('#upload-progress').hidden = true;
-    if (state.files.length + state.texts.length) {
-      await renderReadyState();
-      toast(succeeded === valid.length ? 'Drop ready to share.' : `${succeeded} of ${valid.length} files uploaded.`, succeeded === valid.length ? 'normal' : 'error');
-    } else {
-      setMode('home');
-      toast('No files were uploaded.', 'error');
-    }
+    $('#progress-bar').style.width = '100%';
+    $('#progress-percent').textContent = '100%';
+    $('#progress-bytes').textContent = formatBytes(totalBytes) + ' / ' + formatBytes(totalBytes);
+    $('#progress-time').textContent = 'Upload complete';
+    if (!successCount) throw new Error('No files were uploaded.');
+    setTimeout(() => {
+      if (batchId === state.batchId) {
+        state.uploading = 0;
+        state.uploadController = null;
+        $('#upload-progress').hidden = true;
+        $('#success-panel').hidden = false;
+        $('#result-link').value = state.uploadUrl || (PUBLIC_ORIGIN + '/u/' + state.dropId);
+        renderReadyFiles();
+        toast(successCount === valid.length ? 'Your Pratilipi is ready to share.' : successCount + ' of ' + valid.length + ' files uploaded.');
+        $('#success-panel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
   } catch (error) {
+    if (error.name === 'AbortError') return;
+    state.uploading = 0;
+    state.uploadController = null;
     $('#upload-progress').hidden = true;
-    setMode('home');
     toast(error.message, 'error');
-  } finally {
-    setBusy(-1);
   }
+}
+
+async function cancelUpload() {
+  if (!state.uploading) return;
+  state.batchId++;
+  state.uploadController?.abort();
+  const assets = state.uploadAssets.slice();
+  state.uploading = 0;
+  state.uploadController = null;
+  try {
+    if (state.dropId && assets.length) {
+      await api('/api/drop/' + state.dropId + '/cancel', { method: 'POST', body: JSON.stringify({ assets }) });
+    }
+  } catch {}
+  state.uploadAssets = [];
+  $('#upload-progress').hidden = true;
+  toast('Upload cancelled.', 'error');
 }
 
 async function refreshDrop() {
@@ -431,24 +486,11 @@ function renderReadyFiles() {
 }
 
 async function renderReadyState() {
-  if (!state.files.length && !state.texts.length) return;
-  state.view = 'ready';
-  setMode('ready');
-  $('#home-view').hidden = true;
+  $('#success-panel').hidden = false;
+  $('#home-page').hidden = false;
   $('#active-view').hidden = true;
-  $('#ready-view').hidden = false;
-  // A Drop link shows every item and remains useful when files are added or removed.
-  // Individual download links are still available in the preview list below.
-  const mainLink = state.uploadUrl || `${PUBLIC_ORIGIN}/u/${state.dropId}`;
-  $('#result-link').value = mainLink;
-  const expiryLabel = EXPIRY_OPTIONS[state.expiry] || state.expiry;
-  $('#ready-expiry-label').textContent = `Expires in ${expiryLabel.toLowerCase()}`;
-  $('#ready-expiry-time').textContent = state.expiresAt ? new Date(state.expiresAt).toLocaleString() : 'Auto-delete is enabled';
-  if (!$('#ready-card').classList.contains('reveal')) {
-    requestAnimationFrame(() => $('#ready-card').classList.add('reveal'));
-  }
+  if (state.uploadUrl) $('#result-link').value = state.uploadUrl;
   renderReadyFiles();
-  renderTextList();
 }
 
 function renderTextList() {
@@ -646,15 +688,11 @@ async function renderActive() {
 
 function showView(view) {
   state.view = view;
-  const active = view === 'active';
-  const ready = view === 'ready';
-  $('#home-view').hidden = active || ready;
-  $('#ready-view').hidden = !ready;
-  $('#active-view').hidden = !active;
-  $('#nav-active').classList.toggle('active', active);
-  setMode(ready ? 'ready' : active ? 'home' : 'home');
-  if (active) renderActive();
-  else if (!ready) renderRecent();
+  $('#home-page').hidden = view === 'active';
+  $('#active-view').hidden = view !== 'active';
+  $('#nav-home').classList.toggle('active', view !== 'active');
+  $('#nav-active').classList.toggle('active', view === 'active');
+  if (view === 'active') renderActive();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -666,22 +704,97 @@ function newDrop() {
   state.expiry = '1d';
   state.files = [];
   state.texts = [];
-  state.view = 'home';
+  state.uploadAssets = [];
+  state.uploadController = null;
+  state.uploading = 0;
   if ($('#expiry-select')) {
     $('#expiry-select').disabled = false;
     $('#expiry-select').value = '1d';
   }
-  $('#home-view').hidden = false;
-  $('#ready-view').hidden = true;
+  $('#home-page').hidden = false;
   $('#active-view').hidden = true;
-  $('#text-panel').hidden = true;
   $('#upload-progress').hidden = true;
-  $('#ready-card').classList.remove('reveal');
-  $('#file-input').value = '';
-  setMode('home');
+  $('#success-panel').hidden = true;
+  if ($('#text-input')) $('#text-input').value = '';
+  if ($('#file-input')) $('#file-input').value = '';
+  updateTextCount();
   updateExpiryHelp();
   history.replaceState({}, '', '/');
-  renderRecent();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openModal(id) { const el = $('#' + id); if (el && !el.open) el.showModal(); }
+function closeModal(id) { const el = $('#' + id); if (el && el.open) el.close(); }
+
+async function checkAuth() {
+  try {
+    const data = await api('/api/auth/me', { method: 'GET', headers: {} });
+    state.authenticated = Boolean(data.authenticated);
+    state.authConfigured = data.configured !== false;
+  } catch {
+    state.authConfigured = false;
+  }
+}
+
+function openAuth() {
+  $('#auth-error').textContent = state.authConfigured ? '' : 'Authentication is not configured on this deployment.';
+  openModal('auth-dialog');
+}
+
+async function requireDashboardAccess() {
+  if (state.authenticated) return true;
+  openAuth();
+  return false;
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const loginId = $('#auth-id').value.trim();
+  const passkey = $('#auth-pass').value;
+  $('#auth-error').textContent = '';
+  $('#auth-submit').disabled = true;
+  try {
+    await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ loginId, passkey }) });
+    state.authenticated = true;
+    $('#auth-pass').value = '';
+    closeModal('auth-dialog');
+    toast('Dashboard unlocked.');
+  } catch (error) {
+    $('#auth-error').textContent = error.message;
+  } finally {
+    $('#auth-submit').disabled = false;
+  }
+}
+
+async function downloadZip() {
+  if (!state.files.length && !state.texts.length) {
+    toast('Nothing to download yet.', 'error');
+    return;
+  }
+  const zip = new JSZip();
+  toast('Preparing ZIP...');
+  try {
+    for (const file of state.files) {
+      const response = await fetch(fileUrl(file), { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Could not fetch ' + file.name);
+      zip.file(file.name, await response.blob());
+    }
+    for (const text of state.texts) {
+      const response = await fetch(textUrl(text), { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Could not fetch text');
+      zip.file('text-' + text.id + '.txt', await response.blob());
+    }
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pratilipi-files.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('ZIP downloaded.');
+  } catch (error) {
+    toast(error.message, 'error');
+  }
 }
 
 function setupEvents() {
@@ -689,41 +802,30 @@ function setupEvents() {
   $('#choose-files').onclick = () => $('#file-input').click();
   $('#file-input').onchange = (event) => {
     const files = [...event.target.files];
-    // Reset immediately so selecting the same file after a failed/cancelled upload
-    // reliably emits another change event.
     event.target.value = '';
-    startUploadBatch(files);
+    startUpload(files);
   };
 
   ['dragenter', 'dragover'].forEach((name) => zone.addEventListener(name, (event) => {
     event.preventDefault();
     zone.classList.add('dragover');
-    setMode('dragover');
   }));
   ['dragleave', 'drop'].forEach((name) => zone.addEventListener(name, (event) => {
     event.preventDefault();
     zone.classList.remove('dragover');
-    if (!state.uploading) setMode('home');
   }));
-  zone.addEventListener('drop', (event) => startUploadBatch([...event.dataTransfer.files]));
-  zone.addEventListener('keydown', (event) => {
-    if (event.target !== zone) return;
-    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('#file-input').click(); }
-  });
+  zone.addEventListener('drop', (event) => startUpload([...event.dataTransfer.files]));
 
   document.addEventListener('paste', (event) => {
     const files = [...(event.clipboardData?.items || [])].map((item) => item.kind === 'file' ? item.getAsFile() : null).filter(Boolean);
-    if (files.length) { event.preventDefault(); startUploadBatch(files); return; }
-    const text = event.clipboardData?.getData('text/plain');
-    if (text && document.activeElement !== $('#text-input')) {
-      toggleTextPanel(true);
-      $('#text-input').focus();
-      $('#text-input').setRangeText(text, $('#text-input').selectionStart, $('#text-input').selectionEnd, 'end');
-      updateTextCount();
+    if (files.length) {
+      event.preventDefault();
+      startUpload(files);
     }
   });
 
   $('#paste-files').onclick = async () => {
+    if (!(await requireDashboardAccess())) return;
     try {
       const items = await navigator.clipboard.read();
       const files = [];
@@ -731,36 +833,50 @@ function setupEvents() {
         const type = item.types.find((value) => value.startsWith('image/'));
         if (!type) continue;
         const blob = await item.getType(type);
-        if (blob) files.push(new File([blob], `clipboard-${Date.now()}.${type.split('/')[1] || 'png'}`, { type }));
+        if (blob) files.push(new File([blob], 'clipboard-' + Date.now() + '.png', { type }));
       }
-      if (files.length) startUploadBatch(files);
-      else toast('No files found in clipboard.', 'error');
+      if (files.length) openReview(files);
+      else toast('No image files found in clipboard.', 'error');
     } catch {
       toast('Clipboard access was denied by the browser.', 'error');
     }
   };
 
-  $('#paste-text-toggle').onclick = () => toggleTextPanel(true);
-  $('#paste-text-close').onclick = () => toggleTextPanel(false);
-  $('#save-text').onclick = saveText;
   $('#text-input').oninput = updateTextCount;
-  $('#copy-result-link').onclick = () => copyText($('#result-link').value);
-  $('#share-result').onclick = shareCurrentDrop;
-  $('#show-result-qr').onclick = () => $('#result-link').value && showQr($('#result-link').value, 'Pratilipi share link');
-  $('#preview-files').onclick = () => { $('#ready-files').hidden = !$('#ready-files').hidden; if (!$('#ready-files').hidden) $('#ready-files').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
-  $('#send-more').onclick = () => { newDrop(); showView('home'); };
-  $('#delete-result-drop').onclick = () => state.dropId && deleteEntireDrop(state.dropId, true);
-  $('#expiry-select').onchange = updateExpiryHelp;
-  $('#new-drop').onclick = () => { newDrop(); showView('home'); };
-  $('#new-drop-inline').onclick = () => { newDrop(); showView('home'); };
-  $('#open-active').onclick = () => showView('active');
-  $('#nav-active').onclick = () => showView('active');
-  $('#footer-active').onclick = () => showView('active');
-  $('#footer-new').onclick = () => { newDrop(); showView('home'); };
-  $('#active-refresh').onclick = renderActive;
-  $('#close-qr').onclick = () => $('#qr-dialog').close();
-  $('#close-qr-bottom').onclick = () => $('#qr-dialog').close();
+  $('#save-text').onclick = saveText;
+  $('.text-chip').forEach((chip) => chip.onclick = () => {
+    if (!$('#text-input').value.trim()) {
+      const kind = chip.dataset.template;
+      $('#text-input').value = kind === 'Notes' ? '# Notes\\n\\n' : kind === 'Code' ? '// Code\\n\\n' : kind === 'Ideas' ? 'Ideas\\n\\n' : 'Content\\n\\n';
+    }
+    $('#text-input').focus();
+    updateTextCount();
+  });
+
+  $('#cancel-upload').onclick = cancelUpload;
+  $('#preview-files').onclick = () => { renderReadyFiles(); openModal('files-dialog'); };
+  $('#copy-result-link').onclick = () => { if ($('#result-link').value) copyText($('#result-link').value); };
+  $('#show-result-qr').onclick = () => { if ($('#result-link').value) showQr($('#result-link').value, 'Pratilipi share link'); };
+  $('#download-zip').onclick = downloadZip;
+  $('#confirm-upload').onclick = confirmUpload;
   $('#copy-qr-url').onclick = () => copyText($('#qr-url').value);
+
+  $('#nav-home').onclick = () => { newDrop(); showView('home'); };
+  $('#nav-active').onclick = openActive;
+  $('#nav-about').onclick = () => openModal('about-dialog');
+  $('#access-dashboard').onclick = () => state.authenticated ? toast('Dashboard is already unlocked.') : openAuth();
+  $('#active-refresh').onclick = renderActive;
+  $('#footer-active').onclick = openActive;
+  $('#footer-new').onclick = () => { newDrop(); showView('home'); };
+  $('#expiry-select').onchange = updateExpiryHelp;
+
+  $('[data-close]').forEach((button) => button.onclick = () => closeModal(button.dataset.close));
+  $('#toggle-pass').onclick = () => {
+    const input = $('#auth-pass');
+    input.type = input.type === 'password' ? 'text' : 'password';
+    $('#toggle-pass').textContent = input.type === 'password' ? 'Show' : 'Hide';
+  };
+  $('#auth-form').onsubmit = handleAuthSubmit;
 }
 
 async function openDrop(dropId) {
@@ -790,24 +906,17 @@ function startClock() {
 
 async function boot() {
   renderShell();
+  await checkAuth();
   setupEvents();
   const match = location.pathname.match(/^\/u\/([^/]+)\/?$/);
-  state.publicShare = Boolean(match);
-  if (state.publicShare) {
-    document.body.classList.add('public-share');
-    $('#nav-active').hidden = true;
-    $('#new-drop').hidden = true;
-    $('.footer').hidden = true;
-    $('#send-more').hidden = true;
-    $('#delete-result-drop').hidden = true;
-  }
-  await renderRecent();
   if (match) {
+    state.publicShare = true;
     try {
       await loadDrop(match[1]);
-      showView('ready');
+      $('#access-dashboard').style.display = 'none';
+      $('#nav-active').style.display = 'none';
+      $('#nav-about').style.display = 'none';
     } catch (error) {
-      showView('home');
       toast(error.message, 'error');
     }
   } else {
