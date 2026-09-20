@@ -32,6 +32,42 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 
+const ICON_PATHS = {
+  lock: '<rect x="4.5" y="10.5" width="15" height="10" rx="2.6"/><path d="M7.5 10.5V8a4.5 4.5 0 0 1 9 0v2.5"/><path d="M12 14.6v2.4"/>',
+  shuffle: '<path d="M3 6.5h3.2c2.1 0 3.4 1 4.6 2.7"/><path d="M3 17.5h3.2c2.1 0 3.4-1 4.6-2.7"/><path d="M14.4 8h6.1M14.4 16h6.1"/><path d="m17.7 5 3 3-3 3"/><path d="m17.7 13 3 3-3 3"/><path d="M10.3 9.5 11.6 11.3"/><path d="m10.3 14.5 1.3-1.8"/>',
+  cloudUpload: '<path d="M7.3 17.5a4.3 4.3 0 0 1-.5-8.55A5.8 5.8 0 0 1 17.9 8 4.3 4.3 0 0 1 17.1 17.5H7.3Z"/><path d="M12 10.5v6.6"/><path d="m9.2 13.3 2.8-2.8 2.8 2.8"/>',
+  folder: '<path d="M4 6.8A1.7 1.7 0 0 1 5.7 5.1h4l2 2.3h6.6a1.7 1.7 0 0 1 1.7 1.7v8.2a1.7 1.7 0 0 1-1.7 1.7H5.7A1.7 1.7 0 0 1 4 17.3Z"/>',
+  clipboard: '<rect x="6.8" y="4.6" width="10.4" height="16" rx="1.7"/><path d="M9.4 4.6v-.9A1.7 1.7 0 0 1 11.1 2h1.8a1.7 1.7 0 0 1 1.7 1.7v.9"/><path d="M9.4 11h5.2M9.4 14.6h5.2"/>',
+  cancel: '<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="3"/>',
+  eye: '<path d="M2.3 12S5.8 5.8 12 5.8 21.7 12 21.7 12 18.2 18.2 12 18.2 2.3 12 2.3 12Z"/><circle cx="12" cy="12" r="2.9"/>',
+  link: '<path d="m9.4 14.6 5.2-5.2"/><path d="M10.8 6 12.4 4.4a3.9 3.9 0 1 1 5.5 5.5L16.3 11.5"/><path d="m13.2 18 -1.6 1.6a3.9 3.9 0 1 1-5.5-5.5L7.7 12.5"/>',
+  qr: '<rect x="3.4" y="3.4" width="6.8" height="6.8" rx="1.1"/><rect x="13.8" y="3.4" width="6.8" height="6.8" rx="1.1"/><rect x="3.4" y="13.8" width="6.8" height="6.8" rx="1.1"/><path d="M13.8 14h3v3h-3zM20.6 13.8v3.2M13.8 20.6h2.4M20.6 20.6v.01"/>',
+  download: '<path d="M12 3.4v11.4"/><path d="m7.6 10.8 4.4 4.4 4.4-4.4"/><path d="M4.6 18.6h14.8"/>',
+  files: '<path d="M5.2 4.6h7.4l3.8 3.8V19a1.6 1.6 0 0 1-1.6 1.6H5.2A1.6 1.6 0 0 1 3.6 19V6.2A1.6 1.6 0 0 1 5.2 4.6Z"/><path d="M12.6 4.6v4.2h4.2"/>',
+  disk: '<rect x="3.5" y="3.5" width="17" height="17" rx="2.2"/><path d="M7 3.5V8.3h8V3.5"/><path d="M7 20.3v-5.8h10v5.8"/>',
+  clock: '<circle cx="12" cy="12" r="8.3"/><path d="M12 7.6V12l2.9 1.9"/>',
+  check: '<path d="M4.8 12.6 9.6 17.4 19.2 6.8"/>',
+  notes: '<path d="M6.2 3.6h8.4L18.6 8v12.4H6.2Z"/><path d="M14.6 3.6V8h4"/><path d="M8.7 12.2h6.6M8.7 15.3h6.6M8.7 18.4h3.8"/>',
+  code: '<path d="m9.3 8-4.6 4 4.6 4"/><path d="m14.7 8 4.6 4-4.6 4"/>',
+  idea: '<path d="M9.2 18.2h5.6"/><path d="M10.1 21h3.8"/><path d="M12 3a6.4 6.4 0 0 0-3.7 11.6c.5.4.8 1 .8 1.6h5.8c0-.6.3-1.2.8-1.6A6.4 6.4 0 0 0 12 3Z"/>',
+  content: '<path d="M5.2 4.6h13.6v14.8H5.2Z"/><path d="M8.6 9h6.8M8.6 12.4h6.8M8.6 15.8h3.8"/>',
+  allFiles: '<rect x="3.4" y="3.4" width="7.4" height="7.4" rx="1.4"/><rect x="13.2" y="3.4" width="7.4" height="7.4" rx="1.4"/><rect x="3.4" y="13.2" width="7.4" height="7.4" rx="1.4"/><rect x="13.2" y="13.2" width="7.4" height="7.4" rx="1.4"/>',
+  image: '<rect x="3.4" y="4.6" width="17.2" height="14.8" rx="2"/><circle cx="8.9" cy="9.9" r="1.6"/><path d="m4.4 17 4.9-4.9 3.4 3.4L17.5 11l3.1 3.4"/>',
+  doc: '<path d="M6.6 3.6h6.8L17.4 7.6V20.4H6.6Z"/><path d="M13.4 3.6V7.6h4"/><path d="M9 12h6M9 15.4h6M9 18.4h3.4"/>',
+  video: '<rect x="3" y="6.2" width="13" height="11.6" rx="2"/><path d="m16 10.6 4.6-3v8.8l-4.6-3Z"/>',
+  audio: '<path d="M9 17.6V6.2l9-2v11.4"/><circle cx="6.5" cy="17.6" r="2.5"/><circle cx="15.5" cy="15.6" r="2.5"/>',
+  archive: '<rect x="4" y="4.6" width="16" height="3.8" rx="1"/><path d="M5.4 8.4V18a1.6 1.6 0 0 0 1.6 1.6h10a1.6 1.6 0 0 0 1.6-1.6V8.4"/><path d="M10.2 12.4h3.6"/>',
+  others: '<circle cx="12" cy="12" r="8.3"/><path d="M3.7 12h16.6"/><path d="M12 3.7a12.6 12.6 0 0 1 0 16.6"/><path d="M12 3.7a12.6 12.6 0 0 0 0 16.6"/>',
+  zip: '<path d="M6.6 3.6h6.8L17.4 7.6V20.4H6.6Z"/><path d="M13.4 3.6V7.6h4"/><path d="M10.7 8.6v1.4h1.4V8.6zM10.7 11.4v1.4h1.4v-1.4zM10.7 14.2v1.4h1.4v-1.4z"/><circle cx="11.4" cy="16.9" r="1.5"/>',
+  file: '<path d="M6.6 3.6h6.8L17.4 7.6V20.4H6.6Z"/><path d="M13.4 3.6V7.6h4"/>'
+};
+
+function icon(name, size = 18) {
+  const body = ICON_PATHS[name] || ICON_PATHS.file;
+  return '<svg class="ico" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + body + '</svg>';
+}
+
+
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -61,13 +97,13 @@ function formatRemaining(expiresAt) {
 }
 
 function iconFor(type) {
-  if (type?.startsWith('image/')) return 'IMG';
-  if (type?.startsWith('audio/')) return 'AUD';
-  if (type?.startsWith('video/')) return 'VID';
-  if (type?.includes('pdf')) return 'PDF';
-  if (type?.startsWith('text/')) return 'TXT';
-  if (type?.includes('zip') || type?.includes('archive')) return 'ZIP';
-  return 'FILE';
+  if (type?.startsWith('image/')) return 'image';
+  if (type?.startsWith('audio/')) return 'audio';
+  if (type?.startsWith('video/')) return 'video';
+  if (type?.includes('pdf')) return 'doc';
+  if (type?.startsWith('text/')) return 'notes';
+  if (type?.includes('zip') || type?.includes('archive')) return 'zip';
+  return 'file';
 }
 
 function getHistory() {
@@ -145,7 +181,7 @@ function renderShell() {
 
       <div class="top-right">
         <span class="tagline">Simple <i>•</i> Secure <i>•</i> Yours</span>
-        <button class="dashboard-btn" id="access-dashboard" type="button"><span class="lock-icon">▣</span><span>Access Dashboard</span></button>
+        <button class="dashboard-btn" id="access-dashboard" type="button"><span class="lock-icon">${icon('lock', 16)}</span><span>Access Dashboard</span></button>
       </div>
     </header>
 
@@ -153,7 +189,7 @@ function renderShell() {
       <section class="home-page" id="home-page">
         <div class="hero-heading">
           <div><h1>One Platform. <span>Many Possibilities.</span></h1><p>Every Upload Tells a Story</p></div>
-          <div class="random-banner"><span class="swap-icon">⤨</span><div><strong>Random Theme Active</strong><small>Each visit shows a different style!</small></div></div>
+          <div class="random-banner"><span class="swap-icon">${icon('shuffle', 26)}</span><div><strong>Random Theme Active</strong><small>Each visit shows a different style!</small></div></div>
           <div class="script-badge">Share<br>Store<br>Anywhere <b>♥</b></div>
         </div>
 
@@ -190,11 +226,11 @@ function renderShell() {
 
             <div class="drop-zone" id="drop-zone" tabindex="0" role="button" aria-label="Select files to send">
               <input id="file-input" type="file" multiple hidden>
-              <div class="drop-cloud">⇧</div><strong>Drag &amp; Drop files here</strong><span>or</span><button class="choose-btn" id="choose-files" type="button"><span>▱</span> Choose Files</button>
+              <div class="drop-cloud">${icon('cloudUpload', 42)}</div><strong>Drag &amp; Drop files here</strong><span>or</span><button class="choose-btn" id="choose-files" type="button"><span class="btn-ico">${icon('folder', 17)}</span> Choose Files</button>
             </div>
 
-            <div class="file-type-row"><span class="type-pill c">▧<small>All File Types</small></span><span class="type-pill r">PDF<small>Images</small></span><span class="type-pill b">▤<small>Docs</small></span><span class="type-pill p">▣<small>Videos</small></span><span class="type-pill m">♫<small>Audio</small></span><span class="type-pill o">▦<small>Archives</small></span><span class="type-pill v">◌<small>Others</small></span></div>
-            <div class="card-bottom-row"><button class="ghost-btn" id="paste-files" type="button">⌘ &nbsp; Paste</button><label class="expiry-label">Keep for <select id="expiry-select"><option value="1h">1 Hour</option><option value="12h">12 Hours</option><option value="1d" selected>1 Day</option><option value="1w">1 Week</option><option value="1m">1 Month</option></select></label></div>
+            <div class="file-type-row"><span class="type-pill c">${icon('allFiles', 21)}<small>All File Types</small></span><span class="type-pill r">${icon('image', 21)}<small>Images</small></span><span class="type-pill b">${icon('doc', 21)}<small>Docs</small></span><span class="type-pill p">${icon('video', 21)}<small>Videos</small></span><span class="type-pill m">${icon('audio', 21)}<small>Audio</small></span><span class="type-pill o">${icon('archive', 21)}<small>Archives</small></span><span class="type-pill v">${icon('others', 21)}<small>Others</small></span></div>
+            <div class="card-bottom-row"><button class="ghost-btn" id="paste-files" type="button"><span class="btn-ico">${icon('clipboard', 15)}</span> Paste</button><label class="expiry-label">Keep for <select id="expiry-select"><option value="1h">1 Hour</option><option value="12h">12 Hours</option><option value="1d" selected>1 Day</option><option value="1w">1 Week</option><option value="1m">1 Month</option></select></label></div>
           </section>
 
           <div class="or-separator"><span>OR</span></div>
@@ -223,7 +259,7 @@ function renderShell() {
 </div>
             <textarea id="text-input" placeholder="Paste your text here..."></textarea>
             <div class="text-count" id="text-count">0 characters</div>
-            <div class="text-chip-row"><button class="text-chip" data-template="Notes" type="button"><span>▣</span> Notes</button><button class="text-chip" data-template="Code" type="button"><span>&lt;/&gt;</span> Code</button><button class="text-chip" data-template="Ideas" type="button"><span>◉</span> Ideas</button><button class="text-chip" data-template="Content" type="button"><span>▤</span> Content</button></div>
+            <div class="text-chip-row"><button class="text-chip" data-template="Notes" type="button"><span>${icon('notes', 15)}</span> Notes</button><button class="text-chip" data-template="Code" type="button"><span>${icon('code', 15)}</span> Code</button><button class="text-chip" data-template="Ideas" type="button"><span>${icon('idea', 15)}</span> Ideas</button><button class="text-chip" data-template="Content" type="button"><span>${icon('content', 15)}</span> Content</button></div>
             <button class="save-text-btn" id="save-text" type="button">Save Text</button>
           </section>
         </div>
@@ -231,13 +267,13 @@ function renderShell() {
         <section class="upload-status-panel" id="upload-progress" hidden>
           <div class="status-steps"><div class="status-step active"><span class="ring"></span><span>Preparing your files...</span></div><div class="status-step active"><span class="ring"></span><span>Uploading to cloud...</span></div><div class="status-step"><span class="ring"></span><span>Processing...</span></div><div class="status-step"><span class="ring"></span><span>Creating your Pratilipi...</span></div></div>
           <div class="status-main"><div class="status-art"><div class="upload-mark">प्रतिलिपि</div><p>Uploading your files...</p><div class="progress-track"><i id="progress-bar"></i></div><div class="progress-value" id="progress-percent">0%</div></div></div>
-          <div class="status-side"><div class="status-metric"><span>▱</span><strong id="progress-files">0 files</strong></div><div class="status-metric"><span>♧</span><strong id="progress-bytes">0 B / 0 B</strong></div><div class="status-metric"><span>◷</span><strong id="progress-time">Estimated time: —</strong></div><button class="cancel-btn" id="cancel-upload" type="button"><span>■</span> Cancel Upload</button></div>
+          <div class="status-side"><div class="status-metric"><span>${icon('files', 18)}</span><strong id="progress-files">0 files</strong></div><div class="status-metric"><span>${icon('disk', 18)}</span><strong id="progress-bytes">0 B / 0 B</strong></div><div class="status-metric"><span>${icon('clock', 18)}</span><strong id="progress-time">Estimated time: —</strong></div><button class="cancel-btn" id="cancel-upload" type="button"><span class="btn-ico">${icon('cancel', 14)}</span> Cancel Upload</button></div>
           <div class="upload-queue" id="upload-queue"></div>
         </section>
 
         <section class="success-panel" id="success-panel" hidden>
-          <div class="success-left"><div class="success-check">✓</div><div><h3>Your Pratilipi Created!</h3><p>Your files have been uploaded successfully.</p></div></div>
-          <div class="success-actions"><button class="success-btn primary" id="preview-files" type="button">◉ &nbsp; View Files</button><button class="success-btn" id="copy-result-link" type="button">↗ &nbsp; Copy Share Link</button><button class="success-btn" id="show-result-qr" type="button">▦ &nbsp; Show QR Code</button><button class="success-btn" id="download-zip" type="button">⇩ &nbsp; Download All (ZIP)</button></div>
+          <div class="success-left"><div class="success-check">${icon('check', 26)}</div><div><h3>Your Pratilipi Created!</h3><p>Your files have been uploaded successfully.</p></div></div>
+          <div class="success-actions"><button class="success-btn primary" id="preview-files" type="button"><span class="btn-ico">${icon('eye', 15)}</span> View Files</button><button class="success-btn" id="copy-result-link" type="button"><span class="btn-ico">${icon('link', 15)}</span> Copy Share Link</button><button class="success-btn" id="show-result-qr" type="button"><span class="btn-ico">${icon('qr', 15)}</span> Show QR Code</button><button class="success-btn" id="download-zip" type="button"><span class="btn-ico">${icon('download', 15)}</span> Download All (ZIP)</button></div>
           <input id="result-link" hidden readonly>
           <div id="ready-files" class="ready-files-hidden" hidden></div>
         </section>
@@ -263,7 +299,7 @@ function renderShell() {
     </main>
     </div>
 
-    <dialog class="modal" id="auth-dialog"><div class="modal-inner auth-inner"><button class="modal-close" data-close="auth-dialog" type="button">×</button><div class="modal-icon">▣</div><div class="modal-kicker">SECURE DASHBOARD ACCESS</div><h3>Unlock Pratilipi</h3><p>Enter your private Access ID and passkey to create and manage Drops.</p><form id="auth-form"><label>Access ID<input id="auth-id" autocomplete="username" required></label><label>Passkey<div class="pass-wrap"><input id="auth-pass" type="password" autocomplete="current-password" required><button type="button" id="toggle-pass">Show</button></div></label><div class="auth-error" id="auth-error"></div><button class="save-text-btn" id="auth-submit" type="submit">Access Dashboard</button></form></div></dialog>
+    <dialog class="modal" id="auth-dialog"><div class="modal-inner auth-inner"><button class="modal-close" data-close="auth-dialog" type="button">×</button><div class="modal-icon">${icon('lock', 24)}</div><div class="modal-kicker">SECURE DASHBOARD ACCESS</div><h3>Unlock Pratilipi</h3><p>Enter your private Access ID and passkey to create and manage Drops.</p><form id="auth-form"><label>Access ID<input id="auth-id" autocomplete="username" required></label><label>Passkey<div class="pass-wrap"><input id="auth-pass" type="password" autocomplete="current-password" required><button type="button" id="toggle-pass">Show</button></div></label><div class="auth-error" id="auth-error"></div><button class="save-text-btn" id="auth-submit" type="submit">Access Dashboard</button></form></div></dialog>
     <dialog class="modal" id="about-dialog"><div class="modal-inner"><button class="modal-close" data-close="about-dialog" type="button">×</button><div class="modal-kicker">ABOUT PRATILIPI</div><h3>More Than Files. It's Your Story.</h3><p>Pratilipi is a private, temporary sharing space for files and text with direct public share links. Drops expire automatically.</p><div class="about-grid"><span>Temporary Drops</span><span>Direct Downloads</span><span>QR Sharing</span><span>Public Share Links</span></div></div></dialog>
     <dialog class="modal" id="review-dialog"><div class="modal-inner"><button class="modal-close" data-close="review-dialog" type="button">×</button><div class="modal-kicker">REVIEW BEFORE UPLOAD</div><h3>Ready to upload?</h3><p>Nothing is sent until you press Upload Files.</p><div id="review-list" class="review-list"></div><div class="modal-actions"><button class="secondary-btn" data-close="review-dialog" type="button">Cancel</button><button class="save-text-btn" id="confirm-upload" type="button">Upload Files</button></div></div></dialog>
     <dialog class="modal" id="files-dialog"><div class="modal-inner"><button class="modal-close" data-close="files-dialog" type="button">×</button><div class="modal-kicker">YOUR PRATILIPI</div><h3>Files in this Drop</h3><div id="files-list" class="modal-files-list"></div></div></dialog>
@@ -333,7 +369,7 @@ function setProgress(percent, activeLabel = '') {
 function addQueueItem(file) {
   const row = document.createElement('div');
   row.className = 'queue-item';
-  row.innerHTML = `<span class="queue-icon">${esc(iconFor(file.type))}</span><div class="queue-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>Starting…</small><div class="queue-track"><i></i></div></div><span class="queue-pct">0%</span>`;
+  row.innerHTML = `<span class="queue-icon">${icon(iconFor(file.type), 17)}</span><div class="queue-main"><strong title="${esc(file.name)}">${esc(file.name)}</strong><small>Starting…</small><div class="queue-track"><i></i></div></div><span class="queue-pct">0%</span>`;
   $('#upload-queue').append(row);
   return row;
 }
@@ -531,6 +567,7 @@ function renderReadyFiles() {
       kind: 'file',
       id: file.id,
       name: file.name,
+      contentType: file.content_type || '',
       meta: formatBytes(Number(file.size)) + ' · ' + (file.content_type || file.format || 'file'),
       url: fileUrl(file)
     })),
@@ -543,7 +580,7 @@ function renderReadyFiles() {
     }))
   ];
   const html = items.length ? items.map((item) =>
-    '<article class="ready-file-row"><span>' + esc(item.kind === 'text' ? 'TXT' : fileIcon('')) +
+    '<article class="ready-file-row"><span>' + icon(item.kind === 'text' ? 'notes' : iconFor(item.contentType || ''), 18) +
     '</span><div><strong>' + esc(item.name) + '</strong><small>' + esc(item.meta) +
     '</small></div><button data-ready-copy="' + esc(item.url) + '" type="button">Copy</button><a href="' +
     esc(item.url) + '">Open</a></article>'
@@ -766,12 +803,12 @@ async function loadPublicDrop(dropId) {
   $('#public-link').textContent = state.uploadUrl;
   $('#public-items').innerHTML = [
     ...state.files.map((file) =>
-      '<article class="public-item"><span class="public-item-icon">' + esc(iconFor(file.content_type || '')) + '</span><div><strong>' +
+      '<article class="public-item"><span class="public-item-icon">' + icon(iconFor(file.content_type || ''), 18) + '</span><div><strong>' +
       esc(file.name) + '</strong><small>' + formatBytes(Number(file.size)) + ' · ' + esc(file.content_type || file.format || 'file') +
       '</small></div><a href="' + esc(fileUrl(file)) + '">Download</a></article>'
     ),
     ...state.texts.map((text) =>
-      '<article class="public-item"><span class="public-item-icon">TXT</span><div><strong>' +
+      '<article class="public-item"><span class="public-item-icon">' + icon('notes', 18) + '</span><div><strong>' +
       esc((text.content || 'Text').slice(0, 100)) + '</strong><small>' + text.content.length.toLocaleString() +
       ' characters</small></div><a href="' + esc(textUrl(text)) + '">Download</a></article>'
     )
@@ -948,7 +985,7 @@ function openReview(files) {
   state.pendingFiles = files.filter((file) => file instanceof File && file.size >= 0);
   if (!state.pendingFiles.length) return;
   $('#review-list').innerHTML = state.pendingFiles.map((file) =>
-    '<article class="review-file"><span class="review-icon">' + esc(file.type || 'FILE') + '</span><div><strong>' +
+    '<article class="review-file"><span class="review-icon">' + icon(iconFor(file.type || ''), 18) + '</span><div><strong>' +
     esc(file.name) + '</strong><small>' + esc(file.type || 'Unknown type') + ' · ' + formatBytes(file.size) +
     '</small></div></article>'
   ).join('');
