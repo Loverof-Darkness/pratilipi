@@ -588,7 +588,7 @@ function renderReadyFiles() {
 
   if ($('#ready-files')) $('#ready-files').innerHTML = html;
   if ($('#files-list')) $('#files-list').innerHTML = html;
-  $('[data-ready-copy]').forEach((button) => {
+  $$('[data-ready-copy]').forEach((button) => {
     button.onclick = () => copyText(button.dataset.readyCopy);
   });
 }
@@ -1052,7 +1052,7 @@ function setupEvents() {
 
   $('#text-input').oninput = updateTextCount;
   $('#save-text').onclick = saveText;
-  $('.text-chip').forEach((chip) => chip.onclick = () => {
+  $$('.text-chip').forEach((chip) => chip.onclick = () => {
     if (!$('#text-input').value.trim()) {
       const kind = chip.dataset.template;
       $('#text-input').value = kind === 'Notes' ? '# Notes\\n\\n' : kind === 'Code' ? '// Code\\n\\n' : kind === 'Ideas' ? 'Ideas\\n\\n' : 'Content\\n\\n';
@@ -1078,7 +1078,7 @@ function setupEvents() {
   $('#footer-new').onclick = () => { newDrop(); showView('home'); };
   $('#expiry-select').onchange = updateExpiryHelp;
 
-  $('[data-close]').forEach((button) => button.onclick = () => closeModal(button.dataset.close));
+  $$('[data-close]').forEach((button) => button.onclick = () => closeModal(button.dataset.close));
   $('#toggle-pass').onclick = () => {
     const input = $('#auth-pass');
     input.type = input.type === 'password' ? 'text' : 'password';
